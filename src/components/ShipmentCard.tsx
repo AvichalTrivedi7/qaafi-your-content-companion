@@ -2,8 +2,7 @@ import { Package, MapPin, Calendar, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
-
-type ShipmentStatus = 'dispatched' | 'in_transit' | 'delivered' | 'delayed';
+import { ShipmentStatus } from '@/domain/models';
 
 interface ShipmentCardProps {
   id: string;
@@ -15,8 +14,8 @@ interface ShipmentCardProps {
 }
 
 const statusConfig: Record<ShipmentStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; className: string }> = {
-  dispatched: {
-    label: 'shipments.dispatched',
+  pending: {
+    label: 'shipments.pending',
     variant: 'secondary',
     className: 'bg-muted text-muted-foreground',
   },
@@ -30,8 +29,8 @@ const statusConfig: Record<ShipmentStatus, { label: string; variant: 'default' |
     variant: 'default',
     className: 'bg-success/10 text-success border-success/20',
   },
-  delayed: {
-    label: 'shipments.delayed',
+  cancelled: {
+    label: 'shipments.cancelled',
     variant: 'destructive',
     className: 'bg-destructive/10 text-destructive border-destructive/20',
   },

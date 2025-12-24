@@ -1,0 +1,199 @@
+// Centralized Mock Data Store for Qaafi MVP
+import { InventoryItem, Shipment, Reservation, ActivityLog } from './models';
+
+// Mock Inventory Items
+export const mockInventoryItems: InventoryItem[] = [
+  {
+    id: 'inv-001',
+    sku: 'SKU-001',
+    name: 'Cotton Fabric Roll',
+    description: 'Premium quality cotton fabric',
+    availableStock: 150,
+    reservedStock: 30,
+    unit: 'meters',
+    lowStockThreshold: 50,
+    createdAt: new Date('2024-01-15'),
+    updatedAt: new Date('2024-03-10'),
+  },
+  {
+    id: 'inv-002',
+    sku: 'SKU-002',
+    name: 'Silk Fabric Roll',
+    description: 'Pure silk fabric',
+    availableStock: 25,
+    reservedStock: 10,
+    unit: 'meters',
+    lowStockThreshold: 30,
+    createdAt: new Date('2024-01-20'),
+    updatedAt: new Date('2024-03-08'),
+  },
+  {
+    id: 'inv-003',
+    sku: 'SKU-003',
+    name: 'Denim Fabric Roll',
+    description: 'Heavy-duty denim fabric',
+    availableStock: 200,
+    reservedStock: 50,
+    unit: 'meters',
+    lowStockThreshold: 60,
+    createdAt: new Date('2024-02-01'),
+    updatedAt: new Date('2024-03-12'),
+  },
+  {
+    id: 'inv-004',
+    sku: 'SKU-004',
+    name: 'Linen Fabric Roll',
+    description: 'Natural linen fabric',
+    availableStock: 15,
+    reservedStock: 5,
+    unit: 'meters',
+    lowStockThreshold: 25,
+    createdAt: new Date('2024-02-10'),
+    updatedAt: new Date('2024-03-05'),
+  },
+  {
+    id: 'inv-005',
+    sku: 'SKU-005',
+    name: 'Polyester Fabric Roll',
+    description: 'Synthetic polyester fabric',
+    availableStock: 300,
+    reservedStock: 20,
+    unit: 'meters',
+    lowStockThreshold: 100,
+    createdAt: new Date('2024-02-15'),
+    updatedAt: new Date('2024-03-11'),
+  },
+];
+
+// Mock Shipments
+export const mockShipments: Shipment[] = [
+  {
+    id: 'ship-001',
+    shipmentNumber: 'SHP-2024-001',
+    customerName: 'Sharma Textiles',
+    destination: 'Mumbai, Maharashtra',
+    status: 'delivered',
+    items: [
+      { inventoryItemId: 'inv-001', inventoryItemName: 'Cotton Fabric Roll', quantity: 50 },
+    ],
+    proofOfDelivery: 'pod-001.jpg',
+    createdAt: new Date('2024-03-01'),
+    updatedAt: new Date('2024-03-05'),
+    deliveredAt: new Date('2024-03-05'),
+  },
+  {
+    id: 'ship-002',
+    shipmentNumber: 'SHP-2024-002',
+    customerName: 'Gupta Garments',
+    destination: 'Delhi, NCR',
+    status: 'in_transit',
+    items: [
+      { inventoryItemId: 'inv-002', inventoryItemName: 'Silk Fabric Roll', quantity: 20 },
+      { inventoryItemId: 'inv-003', inventoryItemName: 'Denim Fabric Roll', quantity: 30 },
+    ],
+    createdAt: new Date('2024-03-08'),
+    updatedAt: new Date('2024-03-10'),
+  },
+  {
+    id: 'ship-003',
+    shipmentNumber: 'SHP-2024-003',
+    customerName: 'Patel Fashions',
+    destination: 'Ahmedabad, Gujarat',
+    status: 'pending',
+    items: [
+      { inventoryItemId: 'inv-004', inventoryItemName: 'Linen Fabric Roll', quantity: 15 },
+    ],
+    createdAt: new Date('2024-03-12'),
+    updatedAt: new Date('2024-03-12'),
+  },
+  {
+    id: 'ship-004',
+    shipmentNumber: 'SHP-2024-004',
+    customerName: 'Singh Enterprises',
+    destination: 'Ludhiana, Punjab',
+    status: 'pending',
+    items: [
+      { inventoryItemId: 'inv-005', inventoryItemName: 'Polyester Fabric Roll', quantity: 100 },
+    ],
+    createdAt: new Date('2024-03-13'),
+    updatedAt: new Date('2024-03-13'),
+  },
+];
+
+// Mock Reservations
+export const mockReservations: Reservation[] = [
+  {
+    id: 'res-001',
+    inventoryItemId: 'inv-001',
+    shipmentId: 'ship-002',
+    quantity: 30,
+    status: 'active',
+    createdAt: new Date('2024-03-08'),
+    updatedAt: new Date('2024-03-08'),
+  },
+  {
+    id: 'res-002',
+    inventoryItemId: 'inv-002',
+    shipmentId: 'ship-002',
+    quantity: 10,
+    status: 'active',
+    createdAt: new Date('2024-03-08'),
+    updatedAt: new Date('2024-03-08'),
+  },
+  {
+    id: 'res-003',
+    inventoryItemId: 'inv-004',
+    shipmentId: 'ship-003',
+    quantity: 5,
+    status: 'active',
+    createdAt: new Date('2024-03-12'),
+    updatedAt: new Date('2024-03-12'),
+  },
+];
+
+// Mock Activity Logs
+export const mockActivityLogs: ActivityLog[] = [
+  {
+    id: 'act-001',
+    type: 'stock_in',
+    description: 'Added 100 meters of Cotton Fabric Roll',
+    referenceId: 'inv-001',
+    referenceType: 'inventory',
+    metadata: { quantity: 100, unit: 'meters' },
+    createdAt: new Date('2024-03-12T10:30:00'),
+  },
+  {
+    id: 'act-002',
+    type: 'shipment_created',
+    description: 'Created shipment SHP-2024-004 for Singh Enterprises',
+    referenceId: 'ship-004',
+    referenceType: 'shipment',
+    createdAt: new Date('2024-03-13T09:00:00'),
+  },
+  {
+    id: 'act-003',
+    type: 'reservation_created',
+    description: 'Reserved 30 meters of Cotton Fabric Roll for shipment',
+    referenceId: 'res-001',
+    referenceType: 'reservation',
+    metadata: { quantity: 30, inventoryItemId: 'inv-001' },
+    createdAt: new Date('2024-03-08T14:00:00'),
+  },
+  {
+    id: 'act-004',
+    type: 'stock_out',
+    description: 'Dispatched 50 meters of Cotton Fabric Roll',
+    referenceId: 'inv-001',
+    referenceType: 'inventory',
+    metadata: { quantity: 50, shipmentId: 'ship-001' },
+    createdAt: new Date('2024-03-05T11:00:00'),
+  },
+  {
+    id: 'act-005',
+    type: 'shipment_updated',
+    description: 'Shipment SHP-2024-001 marked as delivered',
+    referenceId: 'ship-001',
+    referenceType: 'shipment',
+    createdAt: new Date('2024-03-05T15:30:00'),
+  },
+];

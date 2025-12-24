@@ -3,7 +3,6 @@ import {
   Truck, 
   AlertTriangle, 
   TrendingUp,
-  TrendingDown,
   Clock,
   CheckCircle2,
   ArrowUpCircle,
@@ -16,71 +15,12 @@ import { ActivityItem } from '@/components/ActivityItem';
 import { ShipmentCard } from '@/components/ShipmentCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-// Mock data for demonstration
-const mockActivities = [
-  {
-    type: 'stock_in' as const,
-    title: 'Cotton Fabric - Blue',
-    description: '+500 meters added to inventory',
-    timestamp: new Date(Date.now() - 1000 * 60 * 15),
-    user: 'Rajesh Kumar',
-  },
-  {
-    type: 'shipment_delivered' as const,
-    title: 'Shipment #SHP-2024-089',
-    description: 'Delivered to Mumbai Warehouse',
-    timestamp: new Date(Date.now() - 1000 * 60 * 45),
-    user: 'Amit Singh',
-  },
-  {
-    type: 'stock_out' as const,
-    title: 'Silk Material - Red',
-    description: '-200 pieces reserved for shipment',
-    timestamp: new Date(Date.now() - 1000 * 60 * 120),
-    user: 'Priya Sharma',
-  },
-  {
-    type: 'shipment_created' as const,
-    title: 'Shipment #SHP-2024-090',
-    description: 'New shipment to Delhi created',
-    timestamp: new Date(Date.now() - 1000 * 60 * 180),
-    user: 'Rajesh Kumar',
-  },
-];
-
-const mockShipments = [
-  {
-    id: 'SHP-2024-091',
-    destination: 'Jaipur Central Market',
-    status: 'in_transit' as const,
-    itemCount: 12,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-  },
-  {
-    id: 'SHP-2024-090',
-    destination: 'Delhi Wholesale Hub',
-    status: 'dispatched' as const,
-    itemCount: 8,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5),
-  },
-  {
-    id: 'SHP-2024-088',
-    destination: 'Lucknow Traders',
-    status: 'delayed' as const,
-    itemCount: 15,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-  },
-];
-
-const mockLowStockItems = [
-  { name: 'Silk Material - Red', available: 45, unit: 'pieces', threshold: 100 },
-  { name: 'Cotton Fabric - White', available: 120, unit: 'meters', threshold: 200 },
-  { name: 'Polyester Blend', available: 30, unit: 'meters', threshold: 50 },
-];
+import { dashboardService, shipmentService } from '@/services';
 
 const Dashboard = () => {
   const { t } = useLanguage();
+  const stats = dashboardService.getStats();
+  const activeShipments = [...shipmentService.getShipmentsByStatus('pending'), ...shipmentService.getShipmentsByStatus('in_transit')].slice(0, 3);
 
   return (
     <AppLayout>
@@ -94,32 +34,31 @@ const Dashboard = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
           title={t('dashboard.totalInventory')}
-          value="2,847"
-          subtitle="12 products"
+          value={stats.inventory.totalAvailableStock.toLocaleString()}
+          subtitle={`${stats.inventory.totalProducts} products`}
           icon={Package}
           variant="primary"
-          trend={{ value: 5.2, isPositive: true }}
         />
         <StatCard
           title={t('dashboard.shipmentsInTransit')}
-          value="8"
-          subtitle="3 arriving today"
+          value={stats.shipments.inTransitCount}
+          subtitle={`${stats.shipments.pendingCount} pending`}
           icon={Truck}
           variant="info"
         />
         <StatCard
           title={t('dashboard.shipmentsDelivered')}
-          value="156"
+          value={stats.shipments.deliveredCount}
           subtitle="This month"
           icon={CheckCircle2}
           variant="success"
         />
         <StatCard
           title={t('dashboard.lowStockAlerts')}
-          value="3"
+          value={stats.inventory.lowStockCount}
           subtitle={t('dashboard.needsAttention')}
           icon={AlertTriangle}
-          variant="warning"
+          variant={stats.inventory.lowStockCount > 0 ? 'warning' : 'default'}
         />
       </div>
 
@@ -135,7 +74,7 @@ const Dashboard = () => {
                 <ArrowUpCircle className="h-5 w-5 text-success" />
               </div>
               <div>
-                <p className="text-xl font-bold text-foreground">+1,250</p>
+                <p className="text-xl font-bold text-foreground">+{stats.inventory.totalAvailableStock}</p>
                 <p className="text-xs text-muted-foreground">{t('dashboard.stockIn')}</p>
               </div>
             </div>
@@ -144,7 +83,7 @@ const Dashboard = () => {
                 <ArrowDownCircle className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <p className="text-xl font-bold text-foreground">-890</p>
+                <p className="text-xl font-bold text-foreground">-{stats.inventory.totalReservedStock}</p>
                 <p className="text-xs text-muted-foreground">{t('dashboard.stockOut')}</p>
               </div>
             </div>
@@ -153,7 +92,7 @@ const Dashboard = () => {
                 <Clock className="h-5 w-5 text-info" />
               </div>
               <div>
-                <p className="text-xl font-bold text-foreground">2.3 {t('dashboard.days')}</p>
+                <p className="text-xl font-bold text-foreground">{stats.shipments.totalShipments}</p>
                 <p className="text-xs text-muted-foreground">{t('dashboard.avgDeliveryTime')}</p>
               </div>
             </div>
@@ -172,8 +111,15 @@ const Dashboard = () => {
             </Button>
           </div>
           <div className="space-y-3">
-            {mockShipments.map((shipment) => (
-              <ShipmentCard key={shipment.id} {...shipment} />
+            {activeShipments.map((shipment) => (
+              <ShipmentCard 
+                key={shipment.id} 
+                id={shipment.shipmentNumber}
+                destination={shipment.destination}
+                status={shipment.status}
+                itemCount={shipment.items.reduce((sum, item) => sum + item.quantity, 0)}
+                createdAt={shipment.createdAt}
+              />
             ))}
           </div>
         </div>
@@ -189,18 +135,18 @@ const Dashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {mockLowStockItems.map((item, index) => (
-                <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-warning/5 border border-warning/10">
+              {stats.lowStockItems.map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-warning/5 border border-warning/10">
                   <div>
                     <p className="text-sm font-medium text-foreground">{item.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {item.available} / {item.threshold} {item.unit}
+                      {item.availableStock} / {item.lowStockThreshold} {item.unit}
                     </p>
                   </div>
                   <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-warning rounded-full"
-                      style={{ width: `${(item.available / item.threshold) * 100}%` }}
+                      style={{ width: `${Math.min((item.availableStock / item.lowStockThreshold) * 100, 100)}%` }}
                     />
                   </div>
                 </div>
@@ -215,8 +161,14 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="divide-y divide-border">
-                {mockActivities.map((activity, index) => (
-                  <ActivityItem key={index} {...activity} />
+                {stats.recentActivities.map((activity) => (
+                  <ActivityItem 
+                    key={activity.id} 
+                    type={activity.type}
+                    title={activity.description}
+                    description={activity.referenceId || ''}
+                    timestamp={activity.createdAt}
+                  />
                 ))}
               </div>
             </CardContent>

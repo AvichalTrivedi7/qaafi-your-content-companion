@@ -1,8 +1,7 @@
 import { formatDistanceToNow } from 'date-fns';
-import { Package, Truck, ArrowUpCircle, ArrowDownCircle, LucideIcon } from 'lucide-react';
+import { Package, Truck, ArrowUpCircle, ArrowDownCircle, Lock, Unlock, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-type ActivityType = 'stock_in' | 'stock_out' | 'shipment_created' | 'shipment_updated' | 'shipment_delivered';
+import { ActivityType } from '@/domain/models';
 
 interface ActivityItemProps {
   type: ActivityType;
@@ -33,10 +32,15 @@ const activityConfig: Record<ActivityType, { icon: LucideIcon; color: string; bg
     color: 'text-info',
     bgColor: 'bg-info/10',
   },
-  shipment_delivered: {
-    icon: Truck,
-    color: 'text-success',
-    bgColor: 'bg-success/10',
+  reservation_created: {
+    icon: Lock,
+    color: 'text-secondary-foreground',
+    bgColor: 'bg-secondary',
+  },
+  reservation_released: {
+    icon: Unlock,
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted',
   },
 };
 
