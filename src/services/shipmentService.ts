@@ -2,6 +2,8 @@
 import { Shipment, ShipmentStatus, ShipmentStats, ShipmentItem } from '@/domain/models';
 import { mockShipments } from '@/domain/mockData';
 import { reservationService } from './reservationService';
+import { activityService } from './activityService';
+import { inventoryService } from './inventoryService';
 
 class ShipmentService {
   private shipments: Shipment[] = [...mockShipments];
@@ -31,26 +33,73 @@ class ShipmentService {
     };
   }
 
+  /**
+   * Validates if all items have sufficient available stock
+   */
+  validateItemsAvailability(items: ShipmentItem[]): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    
+    for (const item of items) {
+      const inventoryItem = inventoryService.getItemById(item.inventoryItemId);
+      if (!inventoryItem) {
+        errors.push(`Item ${item.inventoryItemName} not found in inventory`);
+        continue;
+      }
+      if (inventoryItem.availableStock < item.quantity) {
+        errors.push(`Insufficient stock for ${item.inventoryItemName}: requested ${item.quantity}, available ${inventoryItem.availableStock}`);
+      }
+    }
+    
+    return { valid: errors.length === 0, errors };
+  }
+
+  /**
+   * Creates a new shipment and reserves inventory for all items
+   * Returns null if reservation fails for any item
+   */
   createShipment(
     customerName: string,
     destination: string,
     items: ShipmentItem[]
-  ): Shipment | null {
+  ): { success: boolean; shipment: Shipment | null; errors: string[] } {
+    // Validate availability first
+    const validation = this.validateItemsAvailability(items);
+    if (!validation.valid) {
+      return { success: false, shipment: null, errors: validation.errors };
+    }
+
+    // Generate shipment ID first so we can use it for reservations
+    const shipmentId = `ship-${Date.now()}`;
+    const shipmentNumber = `SHP-${new Date().getFullYear()}-${String(this.shipments.length + 1).padStart(3, '0')}`;
+
     // Create reservations for all items
+    const reservedItems: { inventoryItemId: string; quantity: number }[] = [];
+    
     for (const item of items) {
       const success = reservationService.createReservation(
         item.inventoryItemId,
-        `ship-${Date.now()}`,
+        shipmentId,
         item.quantity
       );
+      
       if (!success) {
-        return null;
+        // Rollback previously created reservations
+        for (const reserved of reservedItems) {
+          reservationService.cancelReservation(reserved.inventoryItemId, shipmentId);
+        }
+        return { 
+          success: false, 
+          shipment: null, 
+          errors: [`Failed to reserve ${item.inventoryItemName}`] 
+        };
       }
+      
+      reservedItems.push({ inventoryItemId: item.inventoryItemId, quantity: item.quantity });
     }
 
     const newShipment: Shipment = {
-      id: `ship-${Date.now()}`,
-      shipmentNumber: `SHP-${new Date().getFullYear()}-${String(this.shipments.length + 1).padStart(3, '0')}`,
+      id: shipmentId,
+      shipmentNumber,
       customerName,
       destination,
       status: 'pending',
@@ -60,46 +109,111 @@ class ShipmentService {
     };
 
     this.shipments.push(newShipment);
-    return newShipment;
+
+    // Log activity
+    activityService.logActivity(
+      'shipment_created',
+      `Created shipment ${shipmentNumber} for ${customerName}`,
+      shipmentId,
+      'shipment',
+      { destination, itemCount: items.length }
+    );
+
+    return { success: true, shipment: newShipment, errors: [] };
   }
 
-  updateStatus(shipmentId: string, newStatus: ShipmentStatus): Shipment | null {
+  /**
+   * Updates shipment status with proper reservation handling:
+   * - 'delivered': Fulfills reservations (permanently deducts from reserved stock)
+   * - 'cancelled': Releases reservations (returns to available stock)
+   */
+  updateStatus(shipmentId: string, newStatus: ShipmentStatus): { success: boolean; shipment: Shipment | null; error?: string } {
     const index = this.shipments.findIndex(s => s.id === shipmentId);
-    if (index === -1) return null;
+    if (index === -1) {
+      return { success: false, shipment: null, error: 'Shipment not found' };
+    }
 
     const shipment = this.shipments[index];
     
+    // Validate status transition
+    if (!this.canTransitionTo(shipment.status, newStatus)) {
+      return { 
+        success: false, 
+        shipment: null, 
+        error: `Cannot transition from ${shipment.status} to ${newStatus}` 
+      };
+    }
+
     // Handle status-specific logic
     if (newStatus === 'delivered') {
-      // Fulfill reservations when delivered
+      // Fulfill reservations - deduct from reserved stock permanently
       for (const item of shipment.items) {
-        reservationService.fulfillReservation(item.inventoryItemId, shipment.id);
+        const fulfilled = reservationService.fulfillReservation(item.inventoryItemId, shipmentId);
+        if (!fulfilled) {
+          return { 
+            success: false, 
+            shipment: null, 
+            error: `Failed to fulfill reservation for ${item.inventoryItemName}` 
+          };
+        }
       }
+      
       this.shipments[index] = {
         ...shipment,
         status: newStatus,
         deliveredAt: new Date(),
         updatedAt: new Date(),
       };
+
+      activityService.logActivity(
+        'shipment_updated',
+        `Shipment ${shipment.shipmentNumber} delivered`,
+        shipmentId,
+        'shipment',
+        { previousStatus: shipment.status }
+      );
+
     } else if (newStatus === 'cancelled') {
-      // Release reservations when cancelled
+      // Release reservations - return to available stock
       for (const item of shipment.items) {
-        reservationService.cancelReservation(item.inventoryItemId, shipment.id);
+        const released = reservationService.cancelReservation(item.inventoryItemId, shipmentId);
+        if (!released) {
+          console.warn(`Warning: Could not release reservation for ${item.inventoryItemName}`);
+        }
       }
+      
       this.shipments[index] = {
         ...shipment,
         status: newStatus,
         updatedAt: new Date(),
       };
+
+      activityService.logActivity(
+        'shipment_updated',
+        `Shipment ${shipment.shipmentNumber} cancelled - inventory released`,
+        shipmentId,
+        'shipment',
+        { previousStatus: shipment.status }
+      );
+
     } else {
+      // Standard status update (pending -> in_transit, etc.)
       this.shipments[index] = {
         ...shipment,
         status: newStatus,
         updatedAt: new Date(),
       };
+
+      activityService.logActivity(
+        'shipment_updated',
+        `Shipment ${shipment.shipmentNumber} status updated to ${newStatus}`,
+        shipmentId,
+        'shipment',
+        { previousStatus: shipment.status }
+      );
     }
 
-    return this.shipments[index];
+    return { success: true, shipment: this.shipments[index] };
   }
 
   uploadProofOfDelivery(shipmentId: string, proofUrl: string): Shipment | null {
@@ -124,8 +238,11 @@ class ShipmentService {
     const currentIndex = flow.indexOf(currentStatus);
     const newIndex = flow.indexOf(newStatus);
     
-    // Can always cancel
-    if (newStatus === 'cancelled') return currentStatus !== 'delivered';
+    // Cannot transition from delivered or cancelled
+    if (currentStatus === 'delivered' || currentStatus === 'cancelled') return false;
+    
+    // Can always cancel (unless delivered)
+    if (newStatus === 'cancelled') return true;
     
     // Can only move forward in the flow
     return newIndex === currentIndex + 1;
@@ -135,7 +252,18 @@ class ShipmentService {
     const flow = this.getStatusFlow();
     const currentIndex = flow.indexOf(currentStatus);
     if (currentIndex === -1 || currentIndex === flow.length - 1) return null;
+    if (currentStatus === 'cancelled') return null;
     return flow[currentIndex + 1];
+  }
+
+  getAvailableTransitions(currentStatus: ShipmentStatus): ShipmentStatus[] {
+    const transitions: ShipmentStatus[] = [];
+    const nextStatus = this.getNextStatus(currentStatus);
+    
+    if (nextStatus) transitions.push(nextStatus);
+    if (this.canTransitionTo(currentStatus, 'cancelled')) transitions.push('cancelled');
+    
+    return transitions;
   }
 }
 
