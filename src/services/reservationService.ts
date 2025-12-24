@@ -2,6 +2,7 @@
 import { Reservation, ReservationStatus } from '@/domain/models';
 import { mockReservations } from '@/domain/mockData';
 import { inventoryService } from './inventoryService';
+import { activityService } from './activityService';
 
 class ReservationService {
   private reservations: Reservation[] = [...mockReservations];
@@ -26,13 +27,20 @@ class ReservationService {
     return this.reservations.filter(res => res.status === 'active');
   }
 
+  /**
+   * Creates a reservation by moving stock from available to reserved
+   * This is called when a shipment is created
+   */
   createReservation(inventoryItemId: string, shipmentId: string, quantity: number): boolean {
-    // Reserve stock in inventory
+    const item = inventoryService.getItemById(inventoryItemId);
+    if (!item) return false;
+
+    // Reserve stock in inventory (moves from available to reserved)
     const success = inventoryService.reserveStock(inventoryItemId, quantity);
     if (!success) return false;
 
     const newReservation: Reservation = {
-      id: `res-${Date.now()}`,
+      id: `res-${Date.now()}-${inventoryItemId}`,
       inventoryItemId,
       shipmentId,
       quantity,
@@ -42,9 +50,23 @@ class ReservationService {
     };
 
     this.reservations.push(newReservation);
+
+    // Log activity
+    activityService.logActivity(
+      'reservation_created',
+      `Reserved ${quantity} ${item.unit} of ${item.name} for shipment`,
+      newReservation.id,
+      'reservation',
+      { quantity, inventoryItemId, shipmentId }
+    );
+
     return true;
   }
 
+  /**
+   * Fulfills a reservation when shipment is delivered
+   * This permanently removes the reserved stock (already deducted from available)
+   */
   fulfillReservation(inventoryItemId: string, shipmentId: string): boolean {
     const index = this.reservations.findIndex(
       res => res.inventoryItemId === inventoryItemId && 
@@ -55,8 +77,9 @@ class ReservationService {
     if (index === -1) return false;
 
     const reservation = this.reservations[index];
+    const item = inventoryService.getItemById(inventoryItemId);
     
-    // Fulfill in inventory (deduct from reserved)
+    // Fulfill in inventory (deduct from reserved - goods have left the warehouse)
     const success = inventoryService.fulfillReservation(inventoryItemId, reservation.quantity);
     if (!success) return false;
 
@@ -66,9 +89,22 @@ class ReservationService {
       updatedAt: new Date(),
     };
 
+    // Log activity
+    activityService.logActivity(
+      'stock_out',
+      `Dispatched ${reservation.quantity} ${item?.unit || 'units'} of ${item?.name || 'item'}`,
+      inventoryItemId,
+      'inventory',
+      { quantity: reservation.quantity, shipmentId }
+    );
+
     return true;
   }
 
+  /**
+   * Cancels a reservation (releases stock back to available)
+   * This is called when a shipment is cancelled or delayed
+   */
   cancelReservation(inventoryItemId: string, shipmentId: string): boolean {
     const index = this.reservations.findIndex(
       res => res.inventoryItemId === inventoryItemId && 
@@ -79,6 +115,7 @@ class ReservationService {
     if (index === -1) return false;
 
     const reservation = this.reservations[index];
+    const item = inventoryService.getItemById(inventoryItemId);
     
     // Release back to available stock
     const success = inventoryService.releaseReservation(inventoryItemId, reservation.quantity);
@@ -89,6 +126,15 @@ class ReservationService {
       status: 'cancelled',
       updatedAt: new Date(),
     };
+
+    // Log activity
+    activityService.logActivity(
+      'reservation_released',
+      `Released ${reservation.quantity} ${item?.unit || 'units'} of ${item?.name || 'item'} back to available stock`,
+      reservation.id,
+      'reservation',
+      { quantity: reservation.quantity, inventoryItemId, shipmentId }
+    );
 
     return true;
   }
