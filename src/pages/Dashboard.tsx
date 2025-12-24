@@ -35,21 +35,21 @@ const Dashboard = () => {
         <StatCard
           title={t('dashboard.totalInventory')}
           value={stats.inventory.totalAvailableStock.toLocaleString()}
-          subtitle={`${stats.inventory.totalProducts} products`}
+          subtitle={`${stats.inventory.totalProducts} ${t('dashboard.products')}`}
           icon={Package}
           variant="primary"
         />
         <StatCard
           title={t('dashboard.shipmentsInTransit')}
           value={stats.shipments.inTransitCount}
-          subtitle={`${stats.shipments.pendingCount} pending`}
+          subtitle={`${stats.shipments.pendingCount} ${t('shipments.pending').toLowerCase()}`}
           icon={Truck}
           variant="info"
         />
         <StatCard
           title={t('dashboard.shipmentsDelivered')}
           value={stats.shipments.deliveredCount}
-          subtitle="This month"
+          subtitle={t('dashboard.thisMonth')}
           icon={CheckCircle2}
           variant="success"
         />

@@ -33,6 +33,8 @@ const translations: Translations = {
   'dashboard.stockOut': { en: 'Stock Out', hi: 'स्टॉक आउट' },
   'dashboard.avgDeliveryTime': { en: 'Avg Delivery Time', hi: 'औसत डिलीवरी समय' },
   'dashboard.days': { en: 'days', hi: 'दिन' },
+  'dashboard.thisMonth': { en: 'This month', hi: 'इस महीने' },
+  'dashboard.products': { en: 'products', hi: 'प्रोडक्ट' },
   
   // Inventory
   'inventory.title': { en: 'Inventory', hi: 'इन्वेंटरी' },
@@ -41,6 +43,7 @@ const translations: Translations = {
   'inventory.unit': { en: 'Unit', hi: 'इकाई' },
   'inventory.meters': { en: 'Meters', hi: 'मीटर' },
   'inventory.pieces': { en: 'Pieces', hi: 'पीस' },
+  'inventory.units': { en: 'units', hi: 'इकाइयाँ' },
   'inventory.available': { en: 'Available', hi: 'उपलब्ध' },
   'inventory.reserved': { en: 'Reserved', hi: 'आरक्षित' },
   'inventory.lastUpdated': { en: 'Last Updated', hi: 'अंतिम अपडेट' },
@@ -68,11 +71,21 @@ const translations: Translations = {
   'shipments.items': { en: 'Items', hi: 'आइटम' },
   'shipments.createdAt': { en: 'Created', hi: 'बनाया गया' },
   'shipments.updatedAt': { en: 'Updated', hi: 'अपडेट किया गया' },
+  'shipments.deliveredAt': { en: 'Delivered', hi: 'डिलीवर किया गया' },
   'shipments.updateStatus': { en: 'Update Status', hi: 'स्थिति अपडेट करें' },
   'shipments.uploadProof': { en: 'Upload Proof', hi: 'प्रमाण अपलोड करें' },
   'shipments.proofOfDelivery': { en: 'Proof of Delivery', hi: 'डिलीवरी का प्रमाण' },
   'shipments.selectProduct': { en: 'Select Product', hi: 'प्रोडक्ट चुनें' },
   'shipments.all': { en: 'All', hi: 'सभी' },
+  'shipments.customerName': { en: 'Customer Name', hi: 'ग्राहक का नाम' },
+  'shipments.enterCustomerName': { en: 'Enter customer name', hi: 'ग्राहक का नाम दर्ज करें' },
+  'shipments.customer': { en: 'Customer', hi: 'ग्राहक' },
+  'shipments.totalShipments': { en: 'total shipments', hi: 'कुल शिपमेंट' },
+  'shipments.markAs': { en: 'Mark as', hi: 'स्थिति बदलें' },
+  'shipments.cancelShipment': { en: 'Cancel Shipment', hi: 'शिपमेंट रद्द करें' },
+  'shipments.proofAltText': { en: 'Proof of Delivery', hi: 'डिलीवरी का प्रमाण' },
+  'shipments.qty': { en: 'Qty', hi: 'मात्रा' },
+  'shipments.availableLabel': { en: 'available', hi: 'उपलब्ध' },
   
   // Common
   'common.save': { en: 'Save', hi: 'सेव करें' },
@@ -97,6 +110,10 @@ const translations: Translations = {
   // App
   'app.name': { en: 'Qaafi', hi: 'क़ाफ़ी' },
   'app.tagline': { en: 'Simplified Supply Chain', hi: 'सरल सप्लाई चेन' },
+  
+  // Errors / Not Found
+  'error.pageNotFound': { en: 'Oops! Page not found', hi: 'उफ़! पेज नहीं मिला' },
+  'error.returnHome': { en: 'Return to Home', hi: 'होम पर वापस जाएं' },
 };
 
 interface LanguageContextType {

@@ -174,7 +174,7 @@ const Shipments = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('shipments.title')}</h1>
-          <p className="text-muted-foreground">{shipments.length} total shipments</p>
+          <p className="text-muted-foreground">{shipments.length} {t('shipments.totalShipments')}</p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={(open) => {
           setIsCreateOpen(open);
@@ -192,9 +192,9 @@ const Shipments = () => {
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>Customer Name</Label>
+                <Label>{t('shipments.customerName')}</Label>
                 <Input
-                  placeholder="Enter customer name"
+                  placeholder={t('shipments.enterCustomerName')}
                   value={newCustomerName}
                   onChange={(e) => setNewCustomerName(e.target.value)}
                 />
@@ -219,14 +219,14 @@ const Shipments = () => {
                     <SelectContent>
                       {inventoryItems.map((item) => (
                         <SelectItem key={item.id} value={item.id}>
-                          {item.name} ({item.availableStock} {item.unit} available)
+                          {item.name} ({item.availableStock} {item.unit} {t('shipments.availableLabel')})
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   <Input
                     type="number"
-                    placeholder="Qty"
+                    placeholder={t('shipments.qty')}
                     value={itemQuantity}
                     onChange={(e) => setItemQuantity(e.target.value)}
                     className="w-24"
@@ -247,7 +247,7 @@ const Shipments = () => {
                         <span className="text-sm">{item.inventoryItemName}</span>
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground">
-                            {item.quantity} {invItem?.unit || 'units'}
+                            {item.quantity} {invItem?.unit || t('inventory.units')}
                           </span>
                           <Button 
                             variant="ghost" 
@@ -405,7 +405,7 @@ const Shipments = () => {
             <div className="space-y-4 pt-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Customer:</span>
+                  <span className="text-sm text-muted-foreground">{t('shipments.customer')}:</span>
                   <span className="font-medium">{selectedShipment.customerName}</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -413,7 +413,7 @@ const Shipments = () => {
                   <span className="font-medium">{selectedShipment.destination}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <span className="text-sm text-muted-foreground">{t('shipments.status')}:</span>
                   <Badge
                     variant="outline"
                     className={cn(
@@ -438,7 +438,7 @@ const Shipments = () => {
                     <div key={index} className="flex justify-between p-2 rounded-lg bg-muted">
                       <span className="text-sm">{item.inventoryItemName}</span>
                       <span className="text-sm text-muted-foreground">
-                        {item.quantity} {invItem?.unit || 'units'}
+                        {item.quantity} {invItem?.unit || t('inventory.units')}
                       </span>
                     </div>
                   );
@@ -448,16 +448,16 @@ const Shipments = () => {
               {/* Timestamps */}
               <div className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex justify-between">
-                  <span>Created:</span>
+                  <span>{t('shipments.createdAt')}:</span>
                   <span>{selectedShipment.createdAt.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Updated:</span>
+                  <span>{t('shipments.updatedAt')}:</span>
                   <span>{selectedShipment.updatedAt.toLocaleString()}</span>
                 </div>
                 {selectedShipment.deliveredAt && (
                   <div className="flex justify-between">
-                    <span>Delivered:</span>
+                    <span>{t('shipments.deliveredAt')}:</span>
                     <span>{selectedShipment.deliveredAt.toLocaleString()}</span>
                   </div>
                 )}
@@ -470,7 +470,7 @@ const Shipments = () => {
                   <div className="rounded-lg overflow-hidden border border-border">
                     <img
                       src={selectedShipment.proofOfDelivery}
-                      alt="Proof of Delivery"
+                      alt={t('shipments.proofAltText')}
                       className="w-full h-48 object-cover"
                     />
                   </div>
@@ -494,7 +494,7 @@ const Shipments = () => {
                       onClick={() => handleUpdateStatus(selectedShipment.id, nextStatus)}
                       className="flex-1"
                     >
-                      {nextStatus === 'cancelled' ? 'Cancel Shipment' : `Mark as ${t(`shipments.${statusConfig[nextStatus].label}`)}`}
+                      {nextStatus === 'cancelled' ? t('shipments.cancelShipment') : `${t('shipments.markAs')} ${t(`shipments.${statusConfig[nextStatus].label}`)}`}
                     </Button>
                   ))}
                 </div>
