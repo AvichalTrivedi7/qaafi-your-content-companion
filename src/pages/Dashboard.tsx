@@ -74,7 +74,7 @@ const Dashboard = () => {
                 <ArrowUpCircle className="h-5 w-5 text-success" />
               </div>
               <div>
-                <p className="text-xl font-bold text-foreground">+{stats.inventory.totalAvailableStock}</p>
+                <p className="text-xl font-bold text-foreground">+{stats.todayMovement.stockIn}</p>
                 <p className="text-xs text-muted-foreground">{t('dashboard.stockIn')}</p>
               </div>
             </div>
@@ -83,7 +83,7 @@ const Dashboard = () => {
                 <ArrowDownCircle className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <p className="text-xl font-bold text-foreground">-{stats.inventory.totalReservedStock}</p>
+                <p className="text-xl font-bold text-foreground">-{stats.todayMovement.stockOut}</p>
                 <p className="text-xs text-muted-foreground">{t('dashboard.stockOut')}</p>
               </div>
             </div>
@@ -92,7 +92,7 @@ const Dashboard = () => {
                 <Clock className="h-5 w-5 text-info" />
               </div>
               <div>
-                <p className="text-xl font-bold text-foreground">{stats.shipments.totalShipments}</p>
+                <p className="text-xl font-bold text-foreground">{stats.deliveryMetrics.averageDeliveryTimeHours}h</p>
                 <p className="text-xs text-muted-foreground">{t('dashboard.avgDeliveryTime')}</p>
               </div>
             </div>

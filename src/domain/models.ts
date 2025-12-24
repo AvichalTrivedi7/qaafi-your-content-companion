@@ -69,6 +69,19 @@ export interface ShipmentStats {
   pendingCount: number;
   inTransitCount: number;
   deliveredCount: number;
+  delayedCount: number;
+}
+
+// Dashboard-specific metric types
+export interface DailyMovement {
+  stockIn: number;
+  stockOut: number;
+  date: Date;
+}
+
+export interface DeliveryMetrics {
+  averageDeliveryTimeHours: number;
+  totalDelivered: number;
 }
 
 export interface DashboardStats {
@@ -76,4 +89,7 @@ export interface DashboardStats {
   shipments: ShipmentStats;
   recentActivities: ActivityLog[];
   lowStockItems: InventoryItem[];
+  delayedShipments: Shipment[];
+  todayMovement: DailyMovement;
+  deliveryMetrics: DeliveryMetrics;
 }

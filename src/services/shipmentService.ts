@@ -30,6 +30,7 @@ class ShipmentService {
       pendingCount: this.getShipmentsByStatus('pending').length,
       inTransitCount: this.getShipmentsByStatus('in_transit').length,
       deliveredCount: this.getShipmentsByStatus('delivered').length,
+      delayedCount: 0, // Calculated by dashboardService to avoid circular dependency
     };
   }
 
