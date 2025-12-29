@@ -1,41 +1,53 @@
 // Activity Service - Centralized activity logging
+// All methods require companyId for data isolation
+
 import { ActivityLog, ActivityType } from '@/domain/models';
 import { mockActivityLogs } from '@/domain/mockData';
 
 class ActivityService {
   private logs: ActivityLog[] = [...mockActivityLogs];
 
-  getAllLogs(): ActivityLog[] {
-    return [...this.logs].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  // Get all logs, optionally scoped to company
+  getAllLogs(companyId?: string): ActivityLog[] {
+    let logs = [...this.logs];
+    if (companyId) {
+      logs = logs.filter(log => log.companyId === companyId);
+    }
+    return logs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
-  getRecentLogs(limit: number = 10): ActivityLog[] {
-    return this.getAllLogs().slice(0, limit);
+  // Get recent logs, optionally scoped to company
+  getRecentLogs(limit: number = 10, companyId?: string): ActivityLog[] {
+    return this.getAllLogs(companyId).slice(0, limit);
   }
 
-  getLogsByType(type: ActivityType): ActivityLog[] {
-    return this.logs
-      .filter(log => log.type === type)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  // Get logs by type, optionally scoped to company
+  getLogsByType(type: ActivityType, companyId?: string): ActivityLog[] {
+    return this.getAllLogs(companyId).filter(log => log.type === type);
   }
 
-  getLogsByReference(referenceId: string, referenceType?: 'inventory' | 'shipment' | 'reservation'): ActivityLog[] {
-    return this.logs
-      .filter(log => {
-        if (referenceType) {
-          return log.referenceId === referenceId && log.referenceType === referenceType;
-        }
-        return log.referenceId === referenceId;
-      })
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  // Get logs by reference, optionally scoped to company
+  getLogsByReference(
+    referenceId: string, 
+    referenceType?: 'inventory' | 'shipment' | 'reservation',
+    companyId?: string
+  ): ActivityLog[] {
+    return this.getAllLogs(companyId).filter(log => {
+      if (referenceType) {
+        return log.referenceId === referenceId && log.referenceType === referenceType;
+      }
+      return log.referenceId === referenceId;
+    });
   }
 
+  // Log activity with company association
   logActivity(
     type: ActivityType,
     description: string,
     referenceId?: string,
     referenceType?: 'inventory' | 'shipment' | 'reservation',
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
+    companyId?: string
   ): ActivityLog {
     const newLog: ActivityLog = {
       id: `act-${Date.now()}`,
@@ -44,6 +56,7 @@ class ActivityService {
       referenceId,
       referenceType,
       metadata,
+      companyId,
       createdAt: new Date(),
     };
 

@@ -1,32 +1,48 @@
 // Inventory Service - Centralized inventory business logic
+// All methods require companyId for data isolation
+
 import { InventoryItem, InventoryStats, ActivityLog } from '@/domain/models';
 import { mockInventoryItems, mockActivityLogs } from '@/domain/mockData';
 
 class InventoryService {
   private items: InventoryItem[] = [...mockInventoryItems];
 
-  getAllItems(): InventoryItem[] {
-    return [...this.items];
+  // Get all items for a specific company
+  getAllItems(companyId?: string): InventoryItem[] {
+    if (!companyId) return [...this.items];
+    return this.items.filter(item => item.companyId === companyId);
   }
 
-  getItemById(id: string): InventoryItem | undefined {
-    return this.items.find(item => item.id === id);
+  // Get item by ID, scoped to company
+  getItemById(id: string, companyId?: string): InventoryItem | undefined {
+    const item = this.items.find(item => item.id === id);
+    if (!item) return undefined;
+    if (companyId && item.companyId !== companyId) return undefined;
+    return item;
   }
 
-  getItemBySku(sku: string): InventoryItem | undefined {
-    return this.items.find(item => item.sku === sku);
+  // Get item by SKU, scoped to company
+  getItemBySku(sku: string, companyId?: string): InventoryItem | undefined {
+    const item = this.items.find(item => item.sku === sku);
+    if (!item) return undefined;
+    if (companyId && item.companyId !== companyId) return undefined;
+    return item;
   }
 
-  getLowStockItems(): InventoryItem[] {
-    return this.items.filter(item => item.availableStock <= item.lowStockThreshold);
+  // Get low stock items for a specific company
+  getLowStockItems(companyId?: string): InventoryItem[] {
+    const items = this.getAllItems(companyId);
+    return items.filter(item => item.availableStock <= item.lowStockThreshold);
   }
 
-  getStats(): InventoryStats {
+  // Get stats for a specific company
+  getStats(companyId?: string): InventoryStats {
+    const items = this.getAllItems(companyId);
     return {
-      totalProducts: this.items.length,
-      totalAvailableStock: this.items.reduce((sum, item) => sum + item.availableStock, 0),
-      totalReservedStock: this.items.reduce((sum, item) => sum + item.reservedStock, 0),
-      lowStockCount: this.getLowStockItems().length,
+      totalProducts: items.length,
+      totalAvailableStock: items.reduce((sum, item) => sum + item.availableStock, 0),
+      totalReservedStock: items.reduce((sum, item) => sum + item.reservedStock, 0),
+      lowStockCount: this.getLowStockItems(companyId).length,
     };
   }
 
@@ -38,9 +54,13 @@ class InventoryService {
     return item.availableStock <= item.lowStockThreshold;
   }
 
-  stockIn(itemId: string, quantity: number): InventoryItem | null {
+  // Stock in for a specific company's item
+  stockIn(itemId: string, quantity: number, companyId?: string): InventoryItem | null {
     const index = this.items.findIndex(item => item.id === itemId);
     if (index === -1) return null;
+    
+    // Verify company ownership
+    if (companyId && this.items[index].companyId !== companyId) return null;
 
     this.items[index] = {
       ...this.items[index],
@@ -51,9 +71,13 @@ class InventoryService {
     return this.items[index];
   }
 
-  stockOut(itemId: string, quantity: number): InventoryItem | null {
+  // Stock out for a specific company's item
+  stockOut(itemId: string, quantity: number, companyId?: string): InventoryItem | null {
     const index = this.items.findIndex(item => item.id === itemId);
     if (index === -1) return null;
+
+    // Verify company ownership
+    if (companyId && this.items[index].companyId !== companyId) return null;
 
     const item = this.items[index];
     if (item.availableStock < quantity) return null;
@@ -67,9 +91,13 @@ class InventoryService {
     return this.items[index];
   }
 
-  reserveStock(itemId: string, quantity: number): boolean {
+  // Reserve stock for a specific company's item
+  reserveStock(itemId: string, quantity: number, companyId?: string): boolean {
     const index = this.items.findIndex(item => item.id === itemId);
     if (index === -1) return false;
+
+    // Verify company ownership
+    if (companyId && this.items[index].companyId !== companyId) return false;
 
     const item = this.items[index];
     if (item.availableStock < quantity) return false;
@@ -84,9 +112,13 @@ class InventoryService {
     return true;
   }
 
-  releaseReservation(itemId: string, quantity: number): boolean {
+  // Release reservation for a specific company's item
+  releaseReservation(itemId: string, quantity: number, companyId?: string): boolean {
     const index = this.items.findIndex(item => item.id === itemId);
     if (index === -1) return false;
+
+    // Verify company ownership
+    if (companyId && this.items[index].companyId !== companyId) return false;
 
     const item = this.items[index];
     if (item.reservedStock < quantity) return false;
@@ -101,9 +133,13 @@ class InventoryService {
     return true;
   }
 
-  fulfillReservation(itemId: string, quantity: number): boolean {
+  // Fulfill reservation for a specific company's item
+  fulfillReservation(itemId: string, quantity: number, companyId?: string): boolean {
     const index = this.items.findIndex(item => item.id === itemId);
     if (index === -1) return false;
+
+    // Verify company ownership
+    if (companyId && this.items[index].companyId !== companyId) return false;
 
     const item = this.items[index];
     if (item.reservedStock < quantity) return false;
@@ -117,11 +153,18 @@ class InventoryService {
     return true;
   }
 
-  getActivityLogs(itemId?: string): ActivityLog[] {
-    const logs = [...mockActivityLogs].filter(log => log.referenceType === 'inventory');
-    if (itemId) {
-      return logs.filter(log => log.referenceId === itemId);
+  // Get activity logs for a specific company
+  getActivityLogs(companyId?: string, itemId?: string): ActivityLog[] {
+    let logs = [...mockActivityLogs].filter(log => log.referenceType === 'inventory');
+    
+    if (companyId) {
+      logs = logs.filter(log => log.companyId === companyId);
     }
+    
+    if (itemId) {
+      logs = logs.filter(log => log.referenceId === itemId);
+    }
+    
     return logs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 }
