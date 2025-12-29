@@ -1,5 +1,5 @@
 // Centralized Mock Data Store for Qaafi MVP
-import { InventoryItem, Shipment, Reservation, ActivityLog, Company } from './models';
+import { InventoryItem, Shipment, Reservation, ActivityLog, Company, ActivityType } from './models';
 
 // Mock Companies
 export const mockCompanies: Company[] = [
@@ -224,11 +224,11 @@ export const mockReservations: Reservation[] = [
   },
 ];
 
-// Mock Activity Logs (now with companyId)
+// Mock Activity Logs (now with companyId and standardized ActivityType)
 export const mockActivityLogs: ActivityLog[] = [
   {
     id: 'act-001',
-    type: 'stock_in',
+    type: ActivityType.INVENTORY_IN,
     description: 'Added 100 meters of Cotton Fabric Roll',
     referenceId: 'inv-001',
     referenceType: 'inventory',
@@ -238,7 +238,7 @@ export const mockActivityLogs: ActivityLog[] = [
   },
   {
     id: 'act-002',
-    type: 'shipment_created',
+    type: ActivityType.SHIPMENT_CREATED,
     description: 'Created shipment SHP-2024-004 for Singh Enterprises',
     referenceId: 'ship-004',
     referenceType: 'shipment',
@@ -247,7 +247,7 @@ export const mockActivityLogs: ActivityLog[] = [
   },
   {
     id: 'act-003',
-    type: 'reservation_created',
+    type: ActivityType.RESERVATION_CREATED,
     description: 'Reserved 30 meters of Cotton Fabric Roll for shipment',
     referenceId: 'res-001',
     referenceType: 'reservation',
@@ -257,7 +257,7 @@ export const mockActivityLogs: ActivityLog[] = [
   },
   {
     id: 'act-004',
-    type: 'stock_out',
+    type: ActivityType.INVENTORY_OUT,
     description: 'Dispatched 50 meters of Cotton Fabric Roll',
     referenceId: 'inv-001',
     referenceType: 'inventory',
@@ -267,7 +267,7 @@ export const mockActivityLogs: ActivityLog[] = [
   },
   {
     id: 'act-005',
-    type: 'shipment_updated',
+    type: ActivityType.SHIPMENT_DELIVERED,
     description: 'Shipment SHP-2024-001 marked as delivered',
     referenceId: 'ship-001',
     referenceType: 'shipment',

@@ -1,7 +1,7 @@
 // Shipment Service - Centralized shipment business logic
 // All methods require companyId for data isolation
 
-import { Shipment, ShipmentStatus, ShipmentStats, ShipmentItem } from '@/domain/models';
+import { Shipment, ShipmentStatus, ShipmentStats, ShipmentItem, ActivityType } from '@/domain/models';
 import { mockShipments } from '@/domain/mockData';
 import { reservationService } from './reservationService';
 import { activityService } from './activityService';
@@ -133,7 +133,7 @@ class ShipmentService {
 
     // Log activity with company association
     activityService.logActivity(
-      'shipment_created',
+      ActivityType.SHIPMENT_CREATED,
       `Created shipment ${shipmentNumber} for ${customerName}`,
       shipmentId,
       'shipment',
@@ -202,7 +202,7 @@ class ShipmentService {
       };
 
       activityService.logActivity(
-        'shipment_updated',
+        ActivityType.SHIPMENT_DELIVERED,
         `Shipment ${shipment.shipmentNumber} delivered`,
         shipmentId,
         'shipment',
@@ -230,7 +230,7 @@ class ShipmentService {
       };
 
       activityService.logActivity(
-        'shipment_updated',
+        ActivityType.SHIPMENT_CANCELLED,
         `Shipment ${shipment.shipmentNumber} cancelled - inventory released`,
         shipmentId,
         'shipment',
@@ -247,7 +247,7 @@ class ShipmentService {
       };
 
       activityService.logActivity(
-        'shipment_updated',
+        ActivityType.SHIPMENT_UPDATED,
         `Shipment ${shipment.shipmentNumber} status updated to ${newStatus}`,
         shipmentId,
         'shipment',

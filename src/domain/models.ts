@@ -8,15 +8,24 @@
 export const SHIPMENT_STATUSES = ['pending', 'in_transit', 'delivered', 'cancelled'] as const;
 export type ShipmentStatus = typeof SHIPMENT_STATUSES[number];
 
-export const ACTIVITY_TYPES = [
-  'stock_in',
-  'stock_out',
-  'shipment_created',
-  'shipment_updated',
-  'reservation_created',
-  'reservation_released'
-] as const;
-export type ActivityType = typeof ACTIVITY_TYPES[number];
+/**
+ * Standardized Activity Types
+ * All activity logs must use one of these explicit values
+ */
+export const ActivityType = {
+  INVENTORY_IN: 'INVENTORY_IN',
+  INVENTORY_OUT: 'INVENTORY_OUT',
+  SHIPMENT_CREATED: 'SHIPMENT_CREATED',
+  SHIPMENT_UPDATED: 'SHIPMENT_UPDATED',
+  SHIPMENT_DELIVERED: 'SHIPMENT_DELIVERED',
+  SHIPMENT_CANCELLED: 'SHIPMENT_CANCELLED',
+  RESERVATION_CREATED: 'RESERVATION_CREATED',
+  RESERVATION_RELEASED: 'RESERVATION_RELEASED',
+} as const;
+
+export type ActivityType = typeof ActivityType[keyof typeof ActivityType];
+
+export const ACTIVITY_TYPES = Object.values(ActivityType);
 
 export const RESERVATION_STATUSES = ['active', 'fulfilled', 'cancelled'] as const;
 export type ReservationStatus = typeof RESERVATION_STATUSES[number];
