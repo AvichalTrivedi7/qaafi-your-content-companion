@@ -15,6 +15,8 @@ const translations: Translations = {
   'nav.inventory': { en: 'Inventory', hi: 'इन्वेंटरी' },
   'nav.shipments': { en: 'Shipments', hi: 'शिपमेंट' },
   'nav.settings': { en: 'Settings', hi: 'सेटिंग्स' },
+  'nav.companies': { en: 'Companies', hi: 'कंपनियाँ' },
+  'nav.goods': { en: 'My Goods', hi: 'मेरा माल' },
   
   // Dashboard
   'dashboard.title': { en: 'Dashboard', hi: 'डैशबोर्ड' },
@@ -65,6 +67,7 @@ const translations: Translations = {
   'shipments.pending': { en: 'Pending', hi: 'लंबित' },
   'shipments.dispatched': { en: 'Dispatched', hi: 'भेज दिया गया' },
   'shipments.inTransit': { en: 'In Transit', hi: 'ट्रांज़िट में' },
+  'shipments.in_transit': { en: 'In Transit', hi: 'ट्रांज़िट में' },
   'shipments.delivered': { en: 'Delivered', hi: 'डिलीवर हो गया' },
   'shipments.cancelled': { en: 'Cancelled', hi: 'रद्द' },
   'shipments.delayed': { en: 'Delayed', hi: 'विलंबित' },
@@ -86,6 +89,8 @@ const translations: Translations = {
   'shipments.proofAltText': { en: 'Proof of Delivery', hi: 'डिलीवरी का प्रमाण' },
   'shipments.qty': { en: 'Qty', hi: 'मात्रा' },
   'shipments.availableLabel': { en: 'available', hi: 'उपलब्ध' },
+  'shipments.myShipments': { en: 'My Shipments', hi: 'मेरे शिपमेंट' },
+  'shipments.trackingHistory': { en: 'Tracking History', hi: 'ट्रैकिंग इतिहास' },
   
   // Common
   'common.save': { en: 'Save', hi: 'सेव करें' },
@@ -106,14 +111,68 @@ const translations: Translations = {
   // Roles
   'role.admin': { en: 'Admin', hi: 'एडमिन' },
   'role.logistics': { en: 'Logistics', hi: 'लॉजिस्टिक्स' },
+  'role.supplier': { en: 'Supplier', hi: 'सप्लायर' },
+  'role.wholesaler': { en: 'Wholesaler', hi: 'थोक विक्रेता' },
+  'role.retailer': { en: 'Retailer', hi: 'खुदरा विक्रेता' },
   
   // App
   'app.name': { en: 'Qaafi', hi: 'क़ाफ़ी' },
   'app.tagline': { en: 'Simplified Supply Chain', hi: 'सरल सप्लाई चेन' },
   
+  // Admin
+  'admin.dashboard': { en: 'Admin Dashboard', hi: 'एडमिन डैशबोर्ड' },
+  'admin.dashboardSubtitle': { en: 'System-wide overview and management', hi: 'सिस्टम-व्यापी अवलोकन और प्रबंधन' },
+  'admin.companies': { en: 'Companies', hi: 'कंपनियाँ' },
+  'admin.companiesSubtitle': { en: 'Manage suppliers, wholesalers, and retailers', hi: 'सप्लायर, थोक विक्रेता, और खुदरा विक्रेता प्रबंधित करें' },
+  'admin.inventorySubtitle': { en: 'Manage all inventory across companies', hi: 'सभी कंपनियों की इन्वेंटरी प्रबंधित करें' },
+  'admin.shipmentsSubtitle': { en: 'Track and manage all shipments', hi: 'सभी शिपमेंट ट्रैक और प्रबंधित करें' },
+  'admin.totalCompanies': { en: 'Total Companies', hi: 'कुल कंपनियाँ' },
+  'admin.suppliers': { en: 'Suppliers', hi: 'सप्लायर' },
+  'admin.wholesalers': { en: 'Wholesalers', hi: 'थोक विक्रेता' },
+  'admin.retailers': { en: 'Retailers', hi: 'खुदरा विक्रेता' },
+  'admin.active': { en: 'active', hi: 'सक्रिय' },
+  'admin.addCompany': { en: 'Add Company', hi: 'कंपनी जोड़ें' },
+  'admin.editCompany': { en: 'Edit Company', hi: 'कंपनी संपादित करें' },
+  'admin.companyName': { en: 'Company Name', hi: 'कंपनी का नाम' },
+  'admin.companyType': { en: 'Type', hi: 'प्रकार' },
+  'admin.contactEmail': { en: 'Contact Email', hi: 'संपर्क ईमेल' },
+  'admin.contactPhone': { en: 'Contact Phone', hi: 'संपर्क फ़ोन' },
+  'admin.address': { en: 'Address', hi: 'पता' },
+  'admin.accessCode': { en: 'Access Code', hi: 'एक्सेस कोड' },
+  'admin.status': { en: 'Status', hi: 'स्थिति' },
+  'admin.activate': { en: 'Activate', hi: 'सक्रिय करें' },
+  'admin.deactivate': { en: 'Deactivate', hi: 'निष्क्रिय करें' },
+  'admin.filterByCompany': { en: 'Filter by company', hi: 'कंपनी द्वारा फ़िल्टर' },
+  'admin.assignedTo': { en: 'Assigned To', hi: 'असाइन किया गया' },
+  'admin.filterByType': { en: 'Filter by type', hi: 'प्रकार द्वारा फ़िल्टर' },
+  'admin.allTypes': { en: 'All Types', hi: 'सभी प्रकार' },
+  'admin.searchCompanies': { en: 'Search companies...', hi: 'कंपनियाँ खोजें...' },
+  
+  // External View
+  'external.welcome': { en: 'Welcome', hi: 'स्वागत है' },
+  'external.yourGoods': { en: 'Your Goods', hi: 'आपका माल' },
+  'external.yourShipments': { en: 'Your Shipments', hi: 'आपके शिपमेंट' },
+  'external.goodsSubtitle': { en: 'View your inventory and stock levels', hi: 'अपनी इन्वेंटरी और स्टॉक स्तर देखें' },
+  'external.shipmentsSubtitle': { en: 'Track your shipments and delivery status', hi: 'अपने शिपमेंट और डिलीवरी स्थिति ट्रैक करें' },
+  'external.noGoods': { en: 'No goods assigned to you', hi: 'आपको कोई माल नहीं दिया गया' },
+  'external.noShipments': { en: 'No shipments found', hi: 'कोई शिपमेंट नहीं मिला' },
+  
+  // Access
+  'access.title': { en: 'Access Portal', hi: 'एक्सेस पोर्टल' },
+  'access.subtitle': { en: 'Choose how you want to access the system', hi: 'चुनें कि आप सिस्टम तक कैसे पहुंचना चाहते हैं' },
+  'access.adminAccess': { en: 'Admin Access', hi: 'एडमिन एक्सेस' },
+  'access.adminDescription': { en: 'Full system management and control', hi: 'पूर्ण सिस्टम प्रबंधन और नियंत्रण' },
+  'access.externalAccess': { en: 'Company Access', hi: 'कंपनी एक्सेस' },
+  'access.externalDescription': { en: 'View your goods and shipments', hi: 'अपना माल और शिपमेंट देखें' },
+  'access.enterCode': { en: 'Enter your access code', hi: 'अपना एक्सेस कोड दर्ज करें' },
+  'access.submit': { en: 'Access Portal', hi: 'पोर्टल एक्सेस करें' },
+  'access.invalidCode': { en: 'Invalid access code', hi: 'अमान्य एक्सेस कोड' },
+  'access.companyInactive': { en: 'Company is inactive', hi: 'कंपनी निष्क्रिय है' },
+  
   // Errors / Not Found
   'error.pageNotFound': { en: 'Oops! Page not found', hi: 'उफ़! पेज नहीं मिला' },
   'error.returnHome': { en: 'Return to Home', hi: 'होम पर वापस जाएं' },
+  'error.insufficientStock': { en: 'Insufficient stock', hi: 'अपर्याप्त स्टॉक' },
 };
 
 interface LanguageContextType {

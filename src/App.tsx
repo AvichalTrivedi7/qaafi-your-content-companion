@@ -4,29 +4,54 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
-import Index from "./pages/Index";
-import Inventory from "./pages/Inventory";
-import Shipments from "./pages/Shipments";
+import { CompanyProvider } from "@/contexts/CompanyContext";
+
+// Pages
+import Access from "./pages/Access";
 import NotFound from "./pages/NotFound";
+
+// Admin Pages
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminCompanies from "./pages/admin/Companies";
+import AdminInventory from "./pages/admin/Inventory";
+import AdminShipments from "./pages/admin/Shipments";
+
+// External Pages
+import ExternalDashboard from "./pages/external/Dashboard";
+import ExternalGoods from "./pages/external/Goods";
+import ExternalShipments from "./pages/external/Shipments";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/inventory" element={<Inventory />} />
-            <Route path="/shipments" element={<Shipments />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <CompanyProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Access Entry */}
+              <Route path="/" element={<Access />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/companies" element={<AdminCompanies />} />
+              <Route path="/admin/inventory" element={<AdminInventory />} />
+              <Route path="/admin/shipments" element={<AdminShipments />} />
+              
+              {/* External Portal Routes */}
+              <Route path="/portal" element={<ExternalDashboard />} />
+              <Route path="/portal/goods" element={<ExternalGoods />} />
+              <Route path="/portal/shipments" element={<ExternalShipments />} />
+              
+              {/* Catch-all */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </CompanyProvider>
     </LanguageProvider>
   </QueryClientProvider>
 );
