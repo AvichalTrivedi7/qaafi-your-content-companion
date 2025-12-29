@@ -1,4 +1,6 @@
 // Shipment Service - Centralized shipment business logic
+// All methods require companyId for data isolation
+
 import { Shipment, ShipmentStatus, ShipmentStats, ShipmentItem } from '@/domain/models';
 import { mockShipments } from '@/domain/mockData';
 import { reservationService } from './reservationService';
@@ -8,40 +10,54 @@ import { inventoryService } from './inventoryService';
 class ShipmentService {
   private shipments: Shipment[] = [...mockShipments];
 
-  getAllShipments(): Shipment[] {
-    return [...this.shipments];
+  // Get all shipments, optionally scoped to company
+  getAllShipments(companyId?: string): Shipment[] {
+    if (!companyId) return [...this.shipments];
+    return this.shipments.filter(s => s.companyId === companyId);
   }
 
-  getShipmentById(id: string): Shipment | undefined {
-    return this.shipments.find(shipment => shipment.id === id);
+  // Get shipment by ID, scoped to company
+  getShipmentById(id: string, companyId?: string): Shipment | undefined {
+    const shipment = this.shipments.find(shipment => shipment.id === id);
+    if (!shipment) return undefined;
+    if (companyId && shipment.companyId !== companyId) return undefined;
+    return shipment;
   }
 
-  getShipmentByNumber(shipmentNumber: string): Shipment | undefined {
-    return this.shipments.find(shipment => shipment.shipmentNumber === shipmentNumber);
+  // Get shipment by number, scoped to company
+  getShipmentByNumber(shipmentNumber: string, companyId?: string): Shipment | undefined {
+    const shipment = this.shipments.find(shipment => shipment.shipmentNumber === shipmentNumber);
+    if (!shipment) return undefined;
+    if (companyId && shipment.companyId !== companyId) return undefined;
+    return shipment;
   }
 
-  getShipmentsByStatus(status: ShipmentStatus): Shipment[] {
-    return this.shipments.filter(shipment => shipment.status === status);
+  // Get shipments by status, scoped to company
+  getShipmentsByStatus(status: ShipmentStatus, companyId?: string): Shipment[] {
+    return this.getAllShipments(companyId).filter(shipment => shipment.status === status);
   }
 
-  getStats(): ShipmentStats {
+  // Get stats for a specific company
+  getStats(companyId?: string): ShipmentStats {
+    const shipments = this.getAllShipments(companyId);
     return {
-      totalShipments: this.shipments.length,
-      pendingCount: this.getShipmentsByStatus('pending').length,
-      inTransitCount: this.getShipmentsByStatus('in_transit').length,
-      deliveredCount: this.getShipmentsByStatus('delivered').length,
+      totalShipments: shipments.length,
+      pendingCount: shipments.filter(s => s.status === 'pending').length,
+      inTransitCount: shipments.filter(s => s.status === 'in_transit').length,
+      deliveredCount: shipments.filter(s => s.status === 'delivered').length,
       delayedCount: 0, // Calculated by dashboardService to avoid circular dependency
     };
   }
 
   /**
    * Validates if all items have sufficient available stock
+   * Scoped to company
    */
-  validateItemsAvailability(items: ShipmentItem[]): { valid: boolean; errors: string[] } {
+  validateItemsAvailability(items: ShipmentItem[], companyId?: string): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
     
     for (const item of items) {
-      const inventoryItem = inventoryService.getItemById(item.inventoryItemId);
+      const inventoryItem = inventoryService.getItemById(item.inventoryItemId, companyId);
       if (!inventoryItem) {
         errors.push(`Item ${item.inventoryItemName} not found in inventory`);
         continue;
@@ -57,14 +73,16 @@ class ShipmentService {
   /**
    * Creates a new shipment and reserves inventory for all items
    * Returns null if reservation fails for any item
+   * Scoped to company
    */
   createShipment(
     customerName: string,
     destination: string,
-    items: ShipmentItem[]
+    items: ShipmentItem[],
+    companyId?: string
   ): { success: boolean; shipment: Shipment | null; errors: string[] } {
     // Validate availability first
-    const validation = this.validateItemsAvailability(items);
+    const validation = this.validateItemsAvailability(items, companyId);
     if (!validation.valid) {
       return { success: false, shipment: null, errors: validation.errors };
     }
@@ -80,13 +98,14 @@ class ShipmentService {
       const success = reservationService.createReservation(
         item.inventoryItemId,
         shipmentId,
-        item.quantity
+        item.quantity,
+        companyId
       );
       
       if (!success) {
         // Rollback previously created reservations
         for (const reserved of reservedItems) {
-          reservationService.cancelReservation(reserved.inventoryItemId, shipmentId);
+          reservationService.cancelReservation(reserved.inventoryItemId, shipmentId, companyId);
         }
         return { 
           success: false, 
@@ -105,19 +124,21 @@ class ShipmentService {
       destination,
       status: 'pending',
       items,
+      companyId,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
     this.shipments.push(newShipment);
 
-    // Log activity
+    // Log activity with company association
     activityService.logActivity(
       'shipment_created',
       `Created shipment ${shipmentNumber} for ${customerName}`,
       shipmentId,
       'shipment',
-      { destination, itemCount: items.length }
+      { destination, itemCount: items.length },
+      companyId
     );
 
     return { success: true, shipment: newShipment, errors: [] };
@@ -127,14 +148,24 @@ class ShipmentService {
    * Updates shipment status with proper reservation handling:
    * - 'delivered': Fulfills reservations (permanently deducts from reserved stock)
    * - 'cancelled': Releases reservations (returns to available stock)
+   * Scoped to company
    */
-  updateStatus(shipmentId: string, newStatus: ShipmentStatus): { success: boolean; shipment: Shipment | null; error?: string } {
+  updateStatus(
+    shipmentId: string, 
+    newStatus: ShipmentStatus,
+    companyId?: string
+  ): { success: boolean; shipment: Shipment | null; error?: string } {
     const index = this.shipments.findIndex(s => s.id === shipmentId);
     if (index === -1) {
       return { success: false, shipment: null, error: 'Shipment not found' };
     }
 
     const shipment = this.shipments[index];
+    
+    // Verify company ownership
+    if (companyId && shipment.companyId !== companyId) {
+      return { success: false, shipment: null, error: 'Shipment not found' };
+    }
     
     // Validate status transition
     if (!this.canTransitionTo(shipment.status, newStatus)) {
@@ -149,7 +180,11 @@ class ShipmentService {
     if (newStatus === 'delivered') {
       // Fulfill reservations - deduct from reserved stock permanently
       for (const item of shipment.items) {
-        const fulfilled = reservationService.fulfillReservation(item.inventoryItemId, shipmentId);
+        const fulfilled = reservationService.fulfillReservation(
+          item.inventoryItemId, 
+          shipmentId,
+          shipment.companyId
+        );
         if (!fulfilled) {
           return { 
             success: false, 
@@ -171,13 +206,18 @@ class ShipmentService {
         `Shipment ${shipment.shipmentNumber} delivered`,
         shipmentId,
         'shipment',
-        { previousStatus: shipment.status }
+        { previousStatus: shipment.status },
+        shipment.companyId
       );
 
     } else if (newStatus === 'cancelled') {
       // Release reservations - return to available stock
       for (const item of shipment.items) {
-        const released = reservationService.cancelReservation(item.inventoryItemId, shipmentId);
+        const released = reservationService.cancelReservation(
+          item.inventoryItemId, 
+          shipmentId,
+          shipment.companyId
+        );
         if (!released) {
           console.warn(`Warning: Could not release reservation for ${item.inventoryItemName}`);
         }
@@ -194,7 +234,8 @@ class ShipmentService {
         `Shipment ${shipment.shipmentNumber} cancelled - inventory released`,
         shipmentId,
         'shipment',
-        { previousStatus: shipment.status }
+        { previousStatus: shipment.status },
+        shipment.companyId
       );
 
     } else {
@@ -210,16 +251,21 @@ class ShipmentService {
         `Shipment ${shipment.shipmentNumber} status updated to ${newStatus}`,
         shipmentId,
         'shipment',
-        { previousStatus: shipment.status }
+        { previousStatus: shipment.status },
+        shipment.companyId
       );
     }
 
     return { success: true, shipment: this.shipments[index] };
   }
 
-  uploadProofOfDelivery(shipmentId: string, proofUrl: string): Shipment | null {
+  // Upload proof of delivery, scoped to company
+  uploadProofOfDelivery(shipmentId: string, proofUrl: string, companyId?: string): Shipment | null {
     const index = this.shipments.findIndex(s => s.id === shipmentId);
     if (index === -1) return null;
+
+    // Verify company ownership
+    if (companyId && this.shipments[index].companyId !== companyId) return null;
 
     this.shipments[index] = {
       ...this.shipments[index],

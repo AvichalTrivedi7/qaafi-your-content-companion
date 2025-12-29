@@ -1,5 +1,7 @@
 // Reservation Service - Centralized reservation business logic
-import { Reservation, ReservationStatus } from '@/domain/models';
+// All methods require companyId for data isolation
+
+import { Reservation } from '@/domain/models';
 import { mockReservations } from '@/domain/mockData';
 import { inventoryService } from './inventoryService';
 import { activityService } from './activityService';
@@ -7,6 +9,7 @@ import { activityService } from './activityService';
 class ReservationService {
   private reservations: Reservation[] = [...mockReservations];
 
+  // Get all reservations (internal use - reservations don't have companyId directly)
   getAllReservations(): Reservation[] {
     return [...this.reservations];
   }
@@ -30,13 +33,19 @@ class ReservationService {
   /**
    * Creates a reservation by moving stock from available to reserved
    * This is called when a shipment is created
+   * Verifies inventory item belongs to the specified company
    */
-  createReservation(inventoryItemId: string, shipmentId: string, quantity: number): boolean {
-    const item = inventoryService.getItemById(inventoryItemId);
+  createReservation(
+    inventoryItemId: string, 
+    shipmentId: string, 
+    quantity: number,
+    companyId?: string
+  ): boolean {
+    const item = inventoryService.getItemById(inventoryItemId, companyId);
     if (!item) return false;
 
     // Reserve stock in inventory (moves from available to reserved)
-    const success = inventoryService.reserveStock(inventoryItemId, quantity);
+    const success = inventoryService.reserveStock(inventoryItemId, quantity, companyId);
     if (!success) return false;
 
     const newReservation: Reservation = {
@@ -51,13 +60,14 @@ class ReservationService {
 
     this.reservations.push(newReservation);
 
-    // Log activity
+    // Log activity with company association
     activityService.logActivity(
       'reservation_created',
       `Reserved ${quantity} ${item.unit} of ${item.name} for shipment`,
       newReservation.id,
       'reservation',
-      { quantity, inventoryItemId, shipmentId }
+      { quantity, inventoryItemId, shipmentId },
+      companyId
     );
 
     return true;
@@ -66,8 +76,13 @@ class ReservationService {
   /**
    * Fulfills a reservation when shipment is delivered
    * This permanently removes the reserved stock (already deducted from available)
+   * Verifies inventory item belongs to the specified company
    */
-  fulfillReservation(inventoryItemId: string, shipmentId: string): boolean {
+  fulfillReservation(
+    inventoryItemId: string, 
+    shipmentId: string,
+    companyId?: string
+  ): boolean {
     const index = this.reservations.findIndex(
       res => res.inventoryItemId === inventoryItemId && 
              res.shipmentId === shipmentId && 
@@ -77,10 +92,13 @@ class ReservationService {
     if (index === -1) return false;
 
     const reservation = this.reservations[index];
-    const item = inventoryService.getItemById(inventoryItemId);
+    const item = inventoryService.getItemById(inventoryItemId, companyId);
+    
+    // Verify company ownership
+    if (companyId && (!item || item.companyId !== companyId)) return false;
     
     // Fulfill in inventory (deduct from reserved - goods have left the warehouse)
-    const success = inventoryService.fulfillReservation(inventoryItemId, reservation.quantity);
+    const success = inventoryService.fulfillReservation(inventoryItemId, reservation.quantity, companyId);
     if (!success) return false;
 
     this.reservations[index] = {
@@ -89,13 +107,14 @@ class ReservationService {
       updatedAt: new Date(),
     };
 
-    // Log activity
+    // Log activity with company association
     activityService.logActivity(
       'stock_out',
       `Dispatched ${reservation.quantity} ${item?.unit || 'units'} of ${item?.name || 'item'}`,
       inventoryItemId,
       'inventory',
-      { quantity: reservation.quantity, shipmentId }
+      { quantity: reservation.quantity, shipmentId },
+      companyId
     );
 
     return true;
@@ -104,8 +123,13 @@ class ReservationService {
   /**
    * Cancels a reservation (releases stock back to available)
    * This is called when a shipment is cancelled or delayed
+   * Verifies inventory item belongs to the specified company
    */
-  cancelReservation(inventoryItemId: string, shipmentId: string): boolean {
+  cancelReservation(
+    inventoryItemId: string, 
+    shipmentId: string,
+    companyId?: string
+  ): boolean {
     const index = this.reservations.findIndex(
       res => res.inventoryItemId === inventoryItemId && 
              res.shipmentId === shipmentId && 
@@ -115,10 +139,13 @@ class ReservationService {
     if (index === -1) return false;
 
     const reservation = this.reservations[index];
-    const item = inventoryService.getItemById(inventoryItemId);
+    const item = inventoryService.getItemById(inventoryItemId, companyId);
+    
+    // Verify company ownership
+    if (companyId && (!item || item.companyId !== companyId)) return false;
     
     // Release back to available stock
-    const success = inventoryService.releaseReservation(inventoryItemId, reservation.quantity);
+    const success = inventoryService.releaseReservation(inventoryItemId, reservation.quantity, companyId);
     if (!success) return false;
 
     this.reservations[index] = {
@@ -127,13 +154,14 @@ class ReservationService {
       updatedAt: new Date(),
     };
 
-    // Log activity
+    // Log activity with company association
     activityService.logActivity(
       'reservation_released',
       `Released ${reservation.quantity} ${item?.unit || 'units'} of ${item?.name || 'item'} back to available stock`,
       reservation.id,
       'reservation',
-      { quantity: reservation.quantity, inventoryItemId, shipmentId }
+      { quantity: reservation.quantity, inventoryItemId, shipmentId },
+      companyId
     );
 
     return true;

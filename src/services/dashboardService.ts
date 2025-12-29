@@ -1,5 +1,6 @@
 // Dashboard Service - Centralized dashboard metric calculations
 // All dashboard values are derived exclusively from these definitions
+// All methods require companyId for data isolation
 
 import { 
   DashboardStats, 
@@ -22,9 +23,10 @@ import { activityService } from './activityService';
  * - availableStock <= lowStockThreshold
  * 
  * This is evaluated per-item using its individual threshold.
+ * Scoped to company.
  */
-function calculateLowStockItems(): InventoryItem[] {
-  return inventoryService.getLowStockItems();
+function calculateLowStockItems(companyId?: string): InventoryItem[] {
+  return inventoryService.getLowStockItems(companyId);
 }
 
 /**
@@ -49,8 +51,8 @@ function isShipmentDelayed(shipment: Shipment): boolean {
   return hoursElapsed > DELAYED_THRESHOLD_HOURS;
 }
 
-function calculateDelayedShipments(): Shipment[] {
-  const allShipments = shipmentService.getAllShipments();
+function calculateDelayedShipments(companyId?: string): Shipment[] {
+  const allShipments = shipmentService.getAllShipments(companyId);
   return allShipments.filter(isShipmentDelayed);
 }
 
@@ -60,6 +62,7 @@ function calculateDelayedShipments(): Shipment[] {
  * Stock Out: Sum of all 'stock_out' activity quantities for today
  * 
  * "Today" is defined as: 00:00:00 to 23:59:59 of the current day
+ * Scoped to company.
  */
 function isSameDay(date1: Date, date2: Date): boolean {
   return (
@@ -69,9 +72,9 @@ function isSameDay(date1: Date, date2: Date): boolean {
   );
 }
 
-function calculateTodayMovement(): DailyMovement {
+function calculateTodayMovement(companyId?: string): DailyMovement {
   const today = new Date();
-  const allLogs = activityService.getAllLogs();
+  const allLogs = activityService.getAllLogs(companyId);
   
   let stockIn = 0;
   let stockOut = 0;
@@ -105,9 +108,10 @@ function calculateTodayMovement(): DailyMovement {
  * - Only considers shipments that have deliveredAt timestamp
  * - Returns 0 if no delivered shipments exist
  * - Time is returned in hours
+ * Scoped to company.
  */
-function calculateDeliveryMetrics(): DeliveryMetrics {
-  const allShipments = shipmentService.getAllShipments();
+function calculateDeliveryMetrics(companyId?: string): DeliveryMetrics {
+  const allShipments = shipmentService.getAllShipments(companyId);
   const deliveredShipments = allShipments.filter(
     s => s.status === 'delivered' && s.deliveredAt
   );
@@ -141,11 +145,12 @@ function calculateDeliveryMetrics(): DeliveryMetrics {
 class DashboardService {
   /**
    * Returns all dashboard statistics, computed from centralized rules
+   * Scoped to company when companyId is provided
    */
-  getStats(): DashboardStats {
-    const inventoryStats = inventoryService.getStats();
-    const shipmentStats = shipmentService.getStats();
-    const delayedShipments = calculateDelayedShipments();
+  getStats(companyId?: string): DashboardStats {
+    const inventoryStats = inventoryService.getStats(companyId);
+    const shipmentStats = shipmentService.getStats(companyId);
+    const delayedShipments = calculateDelayedShipments(companyId);
     
     // Enhance shipment stats with delayed count
     const enhancedShipmentStats = {
@@ -156,26 +161,28 @@ class DashboardService {
     return {
       inventory: inventoryStats,
       shipments: enhancedShipmentStats,
-      recentActivities: activityService.getRecentLogs(5),
-      lowStockItems: calculateLowStockItems(),
+      recentActivities: activityService.getRecentLogs(5, companyId),
+      lowStockItems: calculateLowStockItems(companyId),
       delayedShipments,
-      todayMovement: calculateTodayMovement(),
-      deliveryMetrics: calculateDeliveryMetrics(),
+      todayMovement: calculateTodayMovement(companyId),
+      deliveryMetrics: calculateDeliveryMetrics(companyId),
     };
   }
 
   /**
    * Get low stock items using centralized rule
+   * Scoped to company
    */
-  getLowStockItems(): InventoryItem[] {
-    return calculateLowStockItems();
+  getLowStockItems(companyId?: string): InventoryItem[] {
+    return calculateLowStockItems(companyId);
   }
 
   /**
    * Get delayed shipments using centralized rule
+   * Scoped to company
    */
-  getDelayedShipments(): Shipment[] {
-    return calculateDelayedShipments();
+  getDelayedShipments(companyId?: string): Shipment[] {
+    return calculateDelayedShipments(companyId);
   }
 
   /**
@@ -187,16 +194,18 @@ class DashboardService {
 
   /**
    * Get today's inventory movement
+   * Scoped to company
    */
-  getTodayMovement(): DailyMovement {
-    return calculateTodayMovement();
+  getTodayMovement(companyId?: string): DailyMovement {
+    return calculateTodayMovement(companyId);
   }
 
   /**
    * Get delivery time metrics
+   * Scoped to company
    */
-  getDeliveryMetrics(): DeliveryMetrics {
-    return calculateDeliveryMetrics();
+  getDeliveryMetrics(companyId?: string): DeliveryMetrics {
+    return calculateDeliveryMetrics(companyId);
   }
 
   /**
