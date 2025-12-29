@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
-import { Package, Truck, ArrowUpCircle, ArrowDownCircle, Lock, Unlock, LucideIcon } from 'lucide-react';
+import { Package, Truck, ArrowUpCircle, ArrowDownCircle, Lock, Unlock, CheckCircle, XCircle, LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ActivityType } from '@/domain/models';
 
@@ -12,32 +12,42 @@ interface ActivityItemProps {
 }
 
 const activityConfig: Record<ActivityType, { icon: LucideIcon; color: string; bgColor: string }> = {
-  stock_in: {
+  [ActivityType.INVENTORY_IN]: {
     icon: ArrowUpCircle,
     color: 'text-success',
     bgColor: 'bg-success/10',
   },
-  stock_out: {
+  [ActivityType.INVENTORY_OUT]: {
     icon: ArrowDownCircle,
     color: 'text-warning',
     bgColor: 'bg-warning/10',
   },
-  shipment_created: {
+  [ActivityType.SHIPMENT_CREATED]: {
     icon: Package,
     color: 'text-primary',
     bgColor: 'bg-primary/10',
   },
-  shipment_updated: {
+  [ActivityType.SHIPMENT_UPDATED]: {
     icon: Truck,
     color: 'text-info',
     bgColor: 'bg-info/10',
   },
-  reservation_created: {
+  [ActivityType.SHIPMENT_DELIVERED]: {
+    icon: CheckCircle,
+    color: 'text-success',
+    bgColor: 'bg-success/10',
+  },
+  [ActivityType.SHIPMENT_CANCELLED]: {
+    icon: XCircle,
+    color: 'text-destructive',
+    bgColor: 'bg-destructive/10',
+  },
+  [ActivityType.RESERVATION_CREATED]: {
     icon: Lock,
     color: 'text-secondary-foreground',
     bgColor: 'bg-secondary',
   },
-  reservation_released: {
+  [ActivityType.RESERVATION_RELEASED]: {
     icon: Unlock,
     color: 'text-muted-foreground',
     bgColor: 'bg-muted',

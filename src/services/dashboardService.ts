@@ -7,7 +7,8 @@ import {
   DailyMovement, 
   DeliveryMetrics,
   Shipment,
-  InventoryItem 
+  InventoryItem,
+  ActivityType
 } from '@/domain/models';
 import { inventoryService } from './inventoryService';
 import { shipmentService } from './shipmentService';
@@ -58,8 +59,8 @@ function calculateDelayedShipments(companyId?: string): Shipment[] {
 
 /**
  * RULE: Today's Inventory Movement
- * Stock In: Sum of all 'stock_in' activity quantities for today
- * Stock Out: Sum of all 'stock_out' activity quantities for today
+ * Stock In: Sum of all INVENTORY_IN activity quantities for today
+ * Stock Out: Sum of all INVENTORY_OUT activity quantities for today
  * 
  * "Today" is defined as: 00:00:00 to 23:59:59 of the current day
  * Scoped to company.
@@ -86,9 +87,9 @@ function calculateTodayMovement(companyId?: string): DailyMovement {
     
     const quantity = (log.metadata?.quantity as number) || 0;
     
-    if (log.type === 'stock_in') {
+    if (log.type === ActivityType.INVENTORY_IN) {
       stockIn += quantity;
-    } else if (log.type === 'stock_out') {
+    } else if (log.type === ActivityType.INVENTORY_OUT) {
       stockOut += quantity;
     }
   }

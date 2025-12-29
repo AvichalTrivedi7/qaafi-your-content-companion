@@ -1,7 +1,7 @@
 // Reservation Service - Centralized reservation business logic
 // All methods require companyId for data isolation
 
-import { Reservation } from '@/domain/models';
+import { Reservation, ActivityType } from '@/domain/models';
 import { mockReservations } from '@/domain/mockData';
 import { inventoryService } from './inventoryService';
 import { activityService } from './activityService';
@@ -62,7 +62,7 @@ class ReservationService {
 
     // Log activity with company association
     activityService.logActivity(
-      'reservation_created',
+      ActivityType.RESERVATION_CREATED,
       `Reserved ${quantity} ${item.unit} of ${item.name} for shipment`,
       newReservation.id,
       'reservation',
@@ -109,7 +109,7 @@ class ReservationService {
 
     // Log activity with company association
     activityService.logActivity(
-      'stock_out',
+      ActivityType.INVENTORY_OUT,
       `Dispatched ${reservation.quantity} ${item?.unit || 'units'} of ${item?.name || 'item'}`,
       inventoryItemId,
       'inventory',
@@ -156,7 +156,7 @@ class ReservationService {
 
     // Log activity with company association
     activityService.logActivity(
-      'reservation_released',
+      ActivityType.RESERVATION_RELEASED,
       `Released ${reservation.quantity} ${item?.unit || 'units'} of ${item?.name || 'item'} back to available stock`,
       reservation.id,
       'reservation',

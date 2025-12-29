@@ -66,24 +66,28 @@ class ActivityService {
 
   getActivityIcon(type: ActivityType): string {
     const icons: Record<ActivityType, string> = {
-      stock_in: 'plus',
-      stock_out: 'minus',
-      shipment_created: 'package',
-      shipment_updated: 'truck',
-      reservation_created: 'lock',
-      reservation_released: 'unlock',
+      [ActivityType.INVENTORY_IN]: 'plus',
+      [ActivityType.INVENTORY_OUT]: 'minus',
+      [ActivityType.SHIPMENT_CREATED]: 'package',
+      [ActivityType.SHIPMENT_UPDATED]: 'truck',
+      [ActivityType.SHIPMENT_DELIVERED]: 'check-circle',
+      [ActivityType.SHIPMENT_CANCELLED]: 'x-circle',
+      [ActivityType.RESERVATION_CREATED]: 'lock',
+      [ActivityType.RESERVATION_RELEASED]: 'unlock',
     };
     return icons[type] || 'activity';
   }
 
-  getActivityColor(type: ActivityType): 'success' | 'warning' | 'info' | 'default' {
-    const colors: Record<ActivityType, 'success' | 'warning' | 'info' | 'default'> = {
-      stock_in: 'success',
-      stock_out: 'warning',
-      shipment_created: 'info',
-      shipment_updated: 'info',
-      reservation_created: 'default',
-      reservation_released: 'default',
+  getActivityColor(type: ActivityType): 'success' | 'warning' | 'info' | 'default' | 'destructive' {
+    const colors: Record<ActivityType, 'success' | 'warning' | 'info' | 'default' | 'destructive'> = {
+      [ActivityType.INVENTORY_IN]: 'success',
+      [ActivityType.INVENTORY_OUT]: 'warning',
+      [ActivityType.SHIPMENT_CREATED]: 'info',
+      [ActivityType.SHIPMENT_UPDATED]: 'info',
+      [ActivityType.SHIPMENT_DELIVERED]: 'success',
+      [ActivityType.SHIPMENT_CANCELLED]: 'destructive',
+      [ActivityType.RESERVATION_CREATED]: 'default',
+      [ActivityType.RESERVATION_RELEASED]: 'default',
     };
     return colors[type] || 'default';
   }

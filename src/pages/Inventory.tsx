@@ -45,6 +45,10 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { ActivityType } from '@/domain/models';
+
+// Local inventory activity type (subset of global ActivityType)
+type InventoryActivityType = typeof ActivityType.INVENTORY_IN | typeof ActivityType.INVENTORY_OUT;
 
 interface Product {
   id: string;
@@ -53,12 +57,12 @@ interface Product {
   available: number;
   reserved: number;
   lastUpdated: Date;
-  activityLog: ActivityLog[];
+  activityLog: LocalActivityLog[];
 }
 
-interface ActivityLog {
+interface LocalActivityLog {
   id: string;
-  type: 'stock_in' | 'stock_out';
+  type: InventoryActivityType;
   quantity: number;
   user: string;
   timestamp: Date;
@@ -75,8 +79,8 @@ const initialProducts: Product[] = [
     reserved: 200,
     lastUpdated: new Date(Date.now() - 1000 * 60 * 15),
     activityLog: [
-      { id: '1', type: 'stock_in', quantity: 500, user: 'Rajesh Kumar', timestamp: new Date(Date.now() - 1000 * 60 * 15) },
-      { id: '2', type: 'stock_out', quantity: 150, user: 'Amit Singh', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) },
+      { id: '1', type: ActivityType.INVENTORY_IN, quantity: 500, user: 'Rajesh Kumar', timestamp: new Date(Date.now() - 1000 * 60 * 15) },
+      { id: '2', type: ActivityType.INVENTORY_OUT, quantity: 150, user: 'Amit Singh', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) },
     ],
   },
   {
@@ -87,7 +91,7 @@ const initialProducts: Product[] = [
     reserved: 30,
     lastUpdated: new Date(Date.now() - 1000 * 60 * 120),
     activityLog: [
-      { id: '3', type: 'stock_out', quantity: 200, user: 'Priya Sharma', timestamp: new Date(Date.now() - 1000 * 60 * 120) },
+      { id: '3', type: ActivityType.INVENTORY_OUT, quantity: 200, user: 'Priya Sharma', timestamp: new Date(Date.now() - 1000 * 60 * 120) },
     ],
   },
   {
@@ -172,9 +176,9 @@ const Inventory = () => {
           ? p.available + qty 
           : Math.max(0, p.available - qty);
         
-        const newLog: ActivityLog = {
+        const newLog: LocalActivityLog = {
           id: Date.now().toString(),
-          type: stockActionType === 'in' ? 'stock_in' : 'stock_out',
+          type: stockActionType === 'in' ? ActivityType.INVENTORY_IN : ActivityType.INVENTORY_OUT,
           quantity: qty,
           user: 'Current User',
           timestamp: new Date(),
@@ -432,9 +436,9 @@ const Inventory = () => {
                 <div key={log.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted">
                   <div className={cn(
                     "p-2 rounded-lg",
-                    log.type === 'stock_in' ? "bg-success/10" : "bg-warning/10"
+                    log.type === ActivityType.INVENTORY_IN ? "bg-success/10" : "bg-warning/10"
                   )}>
-                    {log.type === 'stock_in' ? (
+                    {log.type === ActivityType.INVENTORY_IN ? (
                       <ArrowUpCircle className="h-4 w-4 text-success" />
                     ) : (
                       <ArrowDownCircle className="h-4 w-4 text-warning" />
@@ -442,7 +446,7 @@ const Inventory = () => {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-sm">
-                      {log.type === 'stock_in' ? '+' : '-'}{log.quantity} {selectedProduct.unit}
+                      {log.type === ActivityType.INVENTORY_IN ? '+' : '-'}{log.quantity} {selectedProduct.unit}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {log.user} • {log.timestamp.toLocaleString()}
