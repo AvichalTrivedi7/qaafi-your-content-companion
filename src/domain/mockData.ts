@@ -1,7 +1,71 @@
 // Centralized Mock Data Store for Qaafi MVP
-import { InventoryItem, Shipment, Reservation, ActivityLog } from './models';
+import { InventoryItem, Shipment, Reservation, ActivityLog, Company } from './models';
 
-// Mock Inventory Items
+// Mock Companies
+export const mockCompanies: Company[] = [
+  {
+    id: 'company-001',
+    name: 'Sharma Textiles',
+    type: 'retailer',
+    contactEmail: 'contact@sharmatextiles.com',
+    contactPhone: '+91 9876543210',
+    address: 'Mumbai, Maharashtra',
+    accessCode: 'SHRM2024',
+    isActive: true,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+  },
+  {
+    id: 'company-002',
+    name: 'Gupta Garments',
+    type: 'wholesaler',
+    contactEmail: 'info@guptagarments.com',
+    contactPhone: '+91 9876543211',
+    address: 'Delhi, NCR',
+    accessCode: 'GUPT2024',
+    isActive: true,
+    createdAt: new Date('2024-01-05'),
+    updatedAt: new Date('2024-01-05'),
+  },
+  {
+    id: 'company-003',
+    name: 'Patel Fashions',
+    type: 'retailer',
+    contactEmail: 'sales@patelfashions.com',
+    contactPhone: '+91 9876543212',
+    address: 'Ahmedabad, Gujarat',
+    accessCode: 'PATL2024',
+    isActive: true,
+    createdAt: new Date('2024-01-10'),
+    updatedAt: new Date('2024-01-10'),
+  },
+  {
+    id: 'company-004',
+    name: 'Singh Enterprises',
+    type: 'supplier',
+    contactEmail: 'orders@singhenterprises.com',
+    contactPhone: '+91 9876543213',
+    address: 'Ludhiana, Punjab',
+    accessCode: 'SNGH2024',
+    isActive: true,
+    createdAt: new Date('2024-01-15'),
+    updatedAt: new Date('2024-01-15'),
+  },
+  {
+    id: 'company-005',
+    name: 'Royal Fabrics',
+    type: 'supplier',
+    contactEmail: 'hello@royalfabrics.com',
+    contactPhone: '+91 9876543214',
+    address: 'Surat, Gujarat',
+    accessCode: 'ROYL2024',
+    isActive: false,
+    createdAt: new Date('2024-02-01'),
+    updatedAt: new Date('2024-02-15'),
+  },
+];
+
+// Mock Inventory Items (now with companyId)
 export const mockInventoryItems: InventoryItem[] = [
   {
     id: 'inv-001',
@@ -12,6 +76,7 @@ export const mockInventoryItems: InventoryItem[] = [
     reservedStock: 30,
     unit: 'meters',
     lowStockThreshold: 50,
+    companyId: 'company-001',
     createdAt: new Date('2024-01-15'),
     updatedAt: new Date('2024-03-10'),
   },
@@ -24,6 +89,7 @@ export const mockInventoryItems: InventoryItem[] = [
     reservedStock: 10,
     unit: 'meters',
     lowStockThreshold: 30,
+    companyId: 'company-002',
     createdAt: new Date('2024-01-20'),
     updatedAt: new Date('2024-03-08'),
   },
@@ -36,6 +102,7 @@ export const mockInventoryItems: InventoryItem[] = [
     reservedStock: 50,
     unit: 'meters',
     lowStockThreshold: 60,
+    companyId: 'company-002',
     createdAt: new Date('2024-02-01'),
     updatedAt: new Date('2024-03-12'),
   },
@@ -48,6 +115,7 @@ export const mockInventoryItems: InventoryItem[] = [
     reservedStock: 5,
     unit: 'meters',
     lowStockThreshold: 25,
+    companyId: 'company-003',
     createdAt: new Date('2024-02-10'),
     updatedAt: new Date('2024-03-05'),
   },
@@ -60,12 +128,13 @@ export const mockInventoryItems: InventoryItem[] = [
     reservedStock: 20,
     unit: 'meters',
     lowStockThreshold: 100,
+    companyId: 'company-004',
     createdAt: new Date('2024-02-15'),
     updatedAt: new Date('2024-03-11'),
   },
 ];
 
-// Mock Shipments
+// Mock Shipments (now with companyId)
 export const mockShipments: Shipment[] = [
   {
     id: 'ship-001',
@@ -77,6 +146,7 @@ export const mockShipments: Shipment[] = [
       { inventoryItemId: 'inv-001', inventoryItemName: 'Cotton Fabric Roll', quantity: 50 },
     ],
     proofOfDelivery: 'pod-001.jpg',
+    companyId: 'company-001',
     createdAt: new Date('2024-03-01'),
     updatedAt: new Date('2024-03-05'),
     deliveredAt: new Date('2024-03-05'),
@@ -91,6 +161,7 @@ export const mockShipments: Shipment[] = [
       { inventoryItemId: 'inv-002', inventoryItemName: 'Silk Fabric Roll', quantity: 20 },
       { inventoryItemId: 'inv-003', inventoryItemName: 'Denim Fabric Roll', quantity: 30 },
     ],
+    companyId: 'company-002',
     createdAt: new Date('2024-03-08'),
     updatedAt: new Date('2024-03-10'),
   },
@@ -103,6 +174,7 @@ export const mockShipments: Shipment[] = [
     items: [
       { inventoryItemId: 'inv-004', inventoryItemName: 'Linen Fabric Roll', quantity: 15 },
     ],
+    companyId: 'company-003',
     createdAt: new Date('2024-03-12'),
     updatedAt: new Date('2024-03-12'),
   },
@@ -115,6 +187,7 @@ export const mockShipments: Shipment[] = [
     items: [
       { inventoryItemId: 'inv-005', inventoryItemName: 'Polyester Fabric Roll', quantity: 100 },
     ],
+    companyId: 'company-004',
     createdAt: new Date('2024-03-13'),
     updatedAt: new Date('2024-03-13'),
   },
@@ -151,7 +224,7 @@ export const mockReservations: Reservation[] = [
   },
 ];
 
-// Mock Activity Logs
+// Mock Activity Logs (now with companyId)
 export const mockActivityLogs: ActivityLog[] = [
   {
     id: 'act-001',
@@ -160,6 +233,7 @@ export const mockActivityLogs: ActivityLog[] = [
     referenceId: 'inv-001',
     referenceType: 'inventory',
     metadata: { quantity: 100, unit: 'meters' },
+    companyId: 'company-001',
     createdAt: new Date('2024-03-12T10:30:00'),
   },
   {
@@ -168,6 +242,7 @@ export const mockActivityLogs: ActivityLog[] = [
     description: 'Created shipment SHP-2024-004 for Singh Enterprises',
     referenceId: 'ship-004',
     referenceType: 'shipment',
+    companyId: 'company-004',
     createdAt: new Date('2024-03-13T09:00:00'),
   },
   {
@@ -177,6 +252,7 @@ export const mockActivityLogs: ActivityLog[] = [
     referenceId: 'res-001',
     referenceType: 'reservation',
     metadata: { quantity: 30, inventoryItemId: 'inv-001' },
+    companyId: 'company-001',
     createdAt: new Date('2024-03-08T14:00:00'),
   },
   {
@@ -186,6 +262,7 @@ export const mockActivityLogs: ActivityLog[] = [
     referenceId: 'inv-001',
     referenceType: 'inventory',
     metadata: { quantity: 50, shipmentId: 'ship-001' },
+    companyId: 'company-001',
     createdAt: new Date('2024-03-05T11:00:00'),
   },
   {
@@ -194,6 +271,7 @@ export const mockActivityLogs: ActivityLog[] = [
     description: 'Shipment SHP-2024-001 marked as delivered',
     referenceId: 'ship-001',
     referenceType: 'shipment',
+    companyId: 'company-001',
     createdAt: new Date('2024-03-05T15:30:00'),
   },
 ];
