@@ -3,6 +3,20 @@
 export type ShipmentStatus = 'pending' | 'in_transit' | 'delivered' | 'cancelled';
 export type ActivityType = 'stock_in' | 'stock_out' | 'shipment_created' | 'shipment_updated' | 'reservation_created' | 'reservation_released';
 export type ReservationStatus = 'active' | 'fulfilled' | 'cancelled';
+export type CompanyType = 'supplier' | 'wholesaler' | 'retailer';
+
+export interface Company {
+  id: string;
+  name: string;
+  type: CompanyType;
+  contactEmail: string;
+  contactPhone?: string;
+  address?: string;
+  accessCode: string; // Simple access code for external view
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface InventoryItem {
   id: string;
@@ -13,6 +27,7 @@ export interface InventoryItem {
   reservedStock: number;
   unit: string;
   lowStockThreshold: number;
+  companyId?: string; // Associated company
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,6 +40,7 @@ export interface Shipment {
   status: ShipmentStatus;
   items: ShipmentItem[];
   proofOfDelivery?: string;
+  companyId?: string; // Associated company
   createdAt: Date;
   updatedAt: Date;
   deliveredAt?: Date;
@@ -53,6 +69,7 @@ export interface ActivityLog {
   referenceId?: string;
   referenceType?: 'inventory' | 'shipment' | 'reservation';
   metadata?: Record<string, unknown>;
+  companyId?: string; // Associated company
   createdAt: Date;
 }
 
@@ -92,4 +109,13 @@ export interface DashboardStats {
   delayedShipments: Shipment[];
   todayMovement: DailyMovement;
   deliveryMetrics: DeliveryMetrics;
+}
+
+// Company statistics for admin dashboard
+export interface CompanyStats {
+  totalCompanies: number;
+  supplierCount: number;
+  wholesalerCount: number;
+  retailerCount: number;
+  activeCount: number;
 }
