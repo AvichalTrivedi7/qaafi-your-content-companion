@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { Package, Truck, LogOut, Eye } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Package, Truck, LogOut, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCompany } from '@/contexts/CompanyContext';
@@ -14,6 +14,7 @@ export const ExternalLayout = ({ children }: ExternalLayoutProps) => {
   const { t } = useLanguage();
   const { currentCompany, clearCompany } = useCompany();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     clearCompany();
@@ -21,6 +22,7 @@ export const ExternalLayout = ({ children }: ExternalLayoutProps) => {
   };
 
   if (!currentCompany) {
+    navigate('/');
     return null;
   }
 
@@ -31,11 +33,11 @@ export const ExternalLayout = ({ children }: ExternalLayoutProps) => {
         <div className="max-w-5xl mx-auto h-full flex items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
-              <Eye className="h-5 w-5 text-primary" />
+              <span className="text-primary font-bold">Q</span>
             </div>
             <div>
               <h1 className="text-lg font-semibold text-foreground">{currentCompany.name}</h1>
-              <p className="text-xs text-muted-foreground capitalize">{t(`company.type.${currentCompany.type}`)}</p>
+              <p className="text-xs text-muted-foreground capitalize">{t(`role.${currentCompany.type}`)}</p>
             </div>
           </div>
           
@@ -48,7 +50,7 @@ export const ExternalLayout = ({ children }: ExternalLayoutProps) => {
               className="text-muted-foreground hover:text-foreground"
             >
               <LogOut className="h-4 w-4 mr-2" />
-              {t('common.exit')}
+              {t('common.close')}
             </Button>
           </div>
         </div>
@@ -59,30 +61,43 @@ export const ExternalLayout = ({ children }: ExternalLayoutProps) => {
         <div className="max-w-5xl mx-auto px-4">
           <nav className="flex gap-1">
             <Link
-              to="/view/goods"
+              to="/portal"
               className={cn(
                 'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
                 'hover:text-foreground hover:bg-muted/50',
-                location.pathname === '/view/goods'
+                location.pathname === '/portal'
+                  ? 'text-primary border-primary'
+                  : 'text-muted-foreground border-transparent'
+              )}
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              {t('nav.dashboard')}
+            </Link>
+            <Link
+              to="/portal/goods"
+              className={cn(
+                'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
+                'hover:text-foreground hover:bg-muted/50',
+                location.pathname === '/portal/goods'
                   ? 'text-primary border-primary'
                   : 'text-muted-foreground border-transparent'
               )}
             >
               <Package className="h-4 w-4" />
-              {t('external.myGoods')}
+              {t('nav.goods')}
             </Link>
             <Link
-              to="/view/shipments"
+              to="/portal/shipments"
               className={cn(
                 'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
                 'hover:text-foreground hover:bg-muted/50',
-                location.pathname === '/view/shipments'
+                location.pathname === '/portal/shipments'
                   ? 'text-primary border-primary'
                   : 'text-muted-foreground border-transparent'
               )}
             >
               <Truck className="h-4 w-4" />
-              {t('external.myShipments')}
+              {t('nav.shipments')}
             </Link>
           </nav>
         </div>
