@@ -43,7 +43,7 @@ import { format } from 'date-fns';
 const AdminShipments = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const [shipments, setShipments] = useState<Shipment[]>(shipmentService.getAll());
+  const [shipments, setShipments] = useState<Shipment[]>(shipmentService.getAllShipments());
   const companies = companyService.getAll();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<ShipmentStatus | 'all'>('all');
@@ -97,7 +97,7 @@ const AdminShipments = () => {
     
     const updated = shipmentService.updateStatus(selectedShipment.id, newStatus);
     if (updated) {
-      setShipments(shipmentService.getAll());
+      setShipments(shipmentService.getAllShipments());
       toast({
         title: t('shipments.updateStatus'),
         description: `${selectedShipment.shipmentNumber} → ${t(`shipments.${newStatus}`)}`,

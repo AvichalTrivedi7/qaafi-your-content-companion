@@ -35,8 +35,8 @@ const AdminDashboard = () => {
           <StatCard
             title={t('admin.totalCompanies')}
             value={companyStats.totalCompanies}
+            subtitle={`${companyStats.activeCount} ${t('admin.active')}`}
             icon={Building2}
-            trend={{ value: companyStats.activeCount, label: t('admin.active') }}
           />
           <StatCard
             title={t('admin.suppliers')}
@@ -172,7 +172,13 @@ const AdminDashboard = () => {
           <CardContent>
             <div className="space-y-1">
               {stats.recentActivities.slice(0, 5).map(activity => (
-                <ActivityItem key={activity.id} activity={activity} />
+                <ActivityItem
+                  key={activity.id}
+                  type={activity.type}
+                  title={activity.description}
+                  description={activity.referenceType || ''}
+                  timestamp={activity.createdAt}
+                />
               ))}
               {stats.recentActivities.length === 0 && (
                 <p className="text-sm text-muted-foreground py-4 text-center">{t('common.noData')}</p>

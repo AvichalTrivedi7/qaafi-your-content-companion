@@ -48,7 +48,7 @@ import { format } from 'date-fns';
 const AdminInventory = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const [inventory, setInventory] = useState<InventoryItem[]>(inventoryService.getAll());
+  const [inventory, setInventory] = useState<InventoryItem[]>(inventoryService.getAllItems());
   const companies = companyService.getAll();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCompany, setFilterCompany] = useState<string>('all');
@@ -99,7 +99,7 @@ const AdminInventory = () => {
       }
     }
 
-    setInventory(inventoryService.getAll());
+    setInventory(inventoryService.getAllItems());
     setStockDialogOpen(false);
   };
 
