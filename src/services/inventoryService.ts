@@ -1,5 +1,6 @@
 // Inventory Service - Centralized inventory business logic
 // All methods require companyId for data isolation
+// Supports transactional rollback operations
 
 import { InventoryItem, InventoryStats, ActivityLog } from '@/domain/models';
 import { mockInventoryItems, mockActivityLogs } from '@/domain/mockData';
@@ -147,6 +148,54 @@ class InventoryService {
     this.items[index] = {
       ...item,
       reservedStock: item.reservedStock - quantity,
+      updatedAt: new Date(),
+    };
+
+    return true;
+  }
+
+  /**
+   * Restores reserved stock (for rollback after fulfillment)
+   * Adds quantity back to reserved stock pool
+   */
+  restoreReservedStock(itemId: string, quantity: number, companyId?: string): boolean {
+    const index = this.items.findIndex(item => item.id === itemId);
+    if (index === -1) return false;
+
+    // Verify company ownership
+    if (companyId && this.items[index].companyId !== companyId) return false;
+
+    const item = this.items[index];
+
+    this.items[index] = {
+      ...item,
+      reservedStock: item.reservedStock + quantity,
+      updatedAt: new Date(),
+    };
+
+    return true;
+  }
+
+  /**
+   * Directly sets stock levels (for rollback purposes)
+   * Use with caution - bypasses normal validation
+   */
+  setStockLevels(
+    itemId: string, 
+    availableStock: number, 
+    reservedStock: number, 
+    companyId?: string
+  ): boolean {
+    const index = this.items.findIndex(item => item.id === itemId);
+    if (index === -1) return false;
+
+    // Verify company ownership
+    if (companyId && this.items[index].companyId !== companyId) return false;
+
+    this.items[index] = {
+      ...this.items[index],
+      availableStock,
+      reservedStock,
       updatedAt: new Date(),
     };
 

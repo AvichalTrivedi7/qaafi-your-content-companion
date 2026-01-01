@@ -1,5 +1,6 @@
 // Reservation Service - Centralized reservation business logic
 // All methods require companyId for data isolation
+// Supports transactional rollback operations
 
 import { Reservation, ActivityType } from '@/domain/models';
 import { mockReservations } from '@/domain/mockData';
@@ -121,6 +122,43 @@ class ReservationService {
   }
 
   /**
+   * Restores a fulfilled reservation back to active state
+   * Used for rollback when delivery fails after partial fulfillment
+   * Re-adds stock to reserved pool
+   */
+  restoreReservation(
+    inventoryItemId: string,
+    shipmentId: string,
+    quantity: number,
+    companyId?: string
+  ): boolean {
+    const index = this.reservations.findIndex(
+      res => res.inventoryItemId === inventoryItemId && 
+             res.shipmentId === shipmentId && 
+             res.status === 'fulfilled'
+    );
+    
+    if (index === -1) return false;
+
+    const item = inventoryService.getItemById(inventoryItemId, companyId);
+    
+    // Verify company ownership
+    if (companyId && (!item || item.companyId !== companyId)) return false;
+    
+    // Restore reserved stock in inventory
+    const success = inventoryService.restoreReservedStock(inventoryItemId, quantity, companyId);
+    if (!success) return false;
+
+    this.reservations[index] = {
+      ...this.reservations[index],
+      status: 'active',
+      updatedAt: new Date(),
+    };
+
+    return true;
+  }
+
+  /**
    * Cancels a reservation (releases stock back to available)
    * This is called when a shipment is cancelled or delayed
    * Verifies inventory item belongs to the specified company
@@ -164,6 +202,21 @@ class ReservationService {
       companyId
     );
 
+    return true;
+  }
+
+  /**
+   * Removes a reservation entirely (for rollback purposes)
+   * Does NOT modify inventory - caller is responsible for inventory state
+   */
+  removeReservation(inventoryItemId: string, shipmentId: string): boolean {
+    const index = this.reservations.findIndex(
+      res => res.inventoryItemId === inventoryItemId && res.shipmentId === shipmentId
+    );
+    
+    if (index === -1) return false;
+    
+    this.reservations.splice(index, 1);
     return true;
   }
 
