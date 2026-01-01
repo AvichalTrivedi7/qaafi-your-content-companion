@@ -1,22 +1,31 @@
 // Inventory Service - Centralized inventory business logic
 // All methods require companyId for data isolation
 // Supports transactional rollback operations
+// Uses repository pattern for data access
 
 import { InventoryItem, InventoryStats, ActivityLog } from '@/domain/models';
-import { mockInventoryItems, mockActivityLogs } from '@/domain/mockData';
+import { 
+  IInventoryRepository, 
+  IActivityRepository, 
+  inventoryRepository as defaultInventoryRepo,
+  activityRepository as defaultActivityRepo 
+} from '@/repositories';
 
-class InventoryService {
-  private items: InventoryItem[] = [...mockInventoryItems];
+export class InventoryService {
+  constructor(
+    private inventoryRepo: IInventoryRepository = defaultInventoryRepo,
+    private activityRepo: IActivityRepository = defaultActivityRepo
+  ) {}
 
   // Get all items for a specific company
   getAllItems(companyId?: string): InventoryItem[] {
-    if (!companyId) return [...this.items];
-    return this.items.filter(item => item.companyId === companyId);
+    if (!companyId) return this.inventoryRepo.findAll();
+    return this.inventoryRepo.findByCompany(companyId);
   }
 
   // Get item by ID, scoped to company
   getItemById(id: string, companyId?: string): InventoryItem | undefined {
-    const item = this.items.find(item => item.id === id);
+    const item = this.inventoryRepo.findById(id);
     if (!item) return undefined;
     if (companyId && item.companyId !== companyId) return undefined;
     return item;
@@ -24,7 +33,7 @@ class InventoryService {
 
   // Get item by SKU, scoped to company
   getItemBySku(sku: string, companyId?: string): InventoryItem | undefined {
-    const item = this.items.find(item => item.sku === sku);
+    const item = this.inventoryRepo.findBySku(sku);
     if (!item) return undefined;
     if (companyId && item.companyId !== companyId) return undefined;
     return item;
@@ -32,8 +41,7 @@ class InventoryService {
 
   // Get low stock items for a specific company
   getLowStockItems(companyId?: string): InventoryItem[] {
-    const items = this.getAllItems(companyId);
-    return items.filter(item => item.availableStock <= item.lowStockThreshold);
+    return this.inventoryRepo.findLowStock(companyId);
   }
 
   // Get stats for a specific company
@@ -57,101 +65,72 @@ class InventoryService {
 
   // Stock in for a specific company's item
   stockIn(itemId: string, quantity: number, companyId?: string): InventoryItem | null {
-    const index = this.items.findIndex(item => item.id === itemId);
-    if (index === -1) return null;
-    
-    // Verify company ownership
-    if (companyId && this.items[index].companyId !== companyId) return null;
+    const item = this.getItemById(itemId, companyId);
+    if (!item) return null;
 
-    this.items[index] = {
-      ...this.items[index],
-      availableStock: this.items[index].availableStock + quantity,
-      updatedAt: new Date(),
-    };
+    const updated = this.inventoryRepo.update(itemId, {
+      availableStock: item.availableStock + quantity,
+    });
 
-    return this.items[index];
+    return updated || null;
   }
 
   // Stock out for a specific company's item
   stockOut(itemId: string, quantity: number, companyId?: string): InventoryItem | null {
-    const index = this.items.findIndex(item => item.id === itemId);
-    if (index === -1) return null;
-
-    // Verify company ownership
-    if (companyId && this.items[index].companyId !== companyId) return null;
-
-    const item = this.items[index];
+    const item = this.getItemById(itemId, companyId);
+    if (!item) return null;
     if (item.availableStock < quantity) return null;
 
-    this.items[index] = {
-      ...item,
+    const updated = this.inventoryRepo.update(itemId, {
       availableStock: item.availableStock - quantity,
-      updatedAt: new Date(),
-    };
+    });
 
-    return this.items[index];
+    return updated || null;
   }
 
   // Reserve stock for a specific company's item
   reserveStock(itemId: string, quantity: number, companyId?: string): boolean {
-    const index = this.items.findIndex(item => item.id === itemId);
-    if (index === -1) return false;
-
-    // Verify company ownership
-    if (companyId && this.items[index].companyId !== companyId) return false;
-
-    const item = this.items[index];
+    const item = this.getItemById(itemId, companyId);
+    if (!item) return false;
     if (item.availableStock < quantity) return false;
 
-    this.items[index] = {
-      ...item,
-      availableStock: item.availableStock - quantity,
-      reservedStock: item.reservedStock + quantity,
-      updatedAt: new Date(),
-    };
+    const updated = this.inventoryRepo.updateStockLevels(
+      itemId,
+      item.availableStock - quantity,
+      item.reservedStock + quantity
+    );
 
-    return true;
+    return !!updated;
   }
 
   // Release reservation for a specific company's item
   releaseReservation(itemId: string, quantity: number, companyId?: string): boolean {
-    const index = this.items.findIndex(item => item.id === itemId);
-    if (index === -1) return false;
-
-    // Verify company ownership
-    if (companyId && this.items[index].companyId !== companyId) return false;
-
-    const item = this.items[index];
+    const item = this.getItemById(itemId, companyId);
+    if (!item) return false;
     if (item.reservedStock < quantity) return false;
 
-    this.items[index] = {
-      ...item,
-      availableStock: item.availableStock + quantity,
-      reservedStock: item.reservedStock - quantity,
-      updatedAt: new Date(),
-    };
+    const updated = this.inventoryRepo.updateStockLevels(
+      itemId,
+      item.availableStock + quantity,
+      item.reservedStock - quantity
+    );
 
-    return true;
+    return !!updated;
   }
 
   // Fulfill reservation for a specific company's item
   fulfillReservation(itemId: string, quantity: number, companyId?: string): boolean {
-    const index = this.items.findIndex(item => item.id === itemId);
-    if (index === -1) return false;
-
-    // Verify company ownership
-    if (companyId && this.items[index].companyId !== companyId) return false;
-
-    const item = this.items[index];
+    const item = this.getItemById(itemId, companyId);
+    if (!item) return false;
     if (item.reservedStock < quantity) return false;
 
-    this.items[index] = {
-      ...item,
-      reservedStock: item.reservedStock - quantity,
-      updatedAt: new Date(),
-    };
+    const updated = this.inventoryRepo.updateStockLevels(
+      itemId,
+      item.availableStock,
+      item.reservedStock - quantity
+    );
 
-    return true;
+    return !!updated;
   }
 
   /**
@@ -159,21 +138,16 @@ class InventoryService {
    * Adds quantity back to reserved stock pool
    */
   restoreReservedStock(itemId: string, quantity: number, companyId?: string): boolean {
-    const index = this.items.findIndex(item => item.id === itemId);
-    if (index === -1) return false;
+    const item = this.getItemById(itemId, companyId);
+    if (!item) return false;
 
-    // Verify company ownership
-    if (companyId && this.items[index].companyId !== companyId) return false;
+    const updated = this.inventoryRepo.updateStockLevels(
+      itemId,
+      item.availableStock,
+      item.reservedStock + quantity
+    );
 
-    const item = this.items[index];
-
-    this.items[index] = {
-      ...item,
-      reservedStock: item.reservedStock + quantity,
-      updatedAt: new Date(),
-    };
-
-    return true;
+    return !!updated;
   }
 
   /**
@@ -181,41 +155,36 @@ class InventoryService {
    * Use with caution - bypasses normal validation
    */
   setStockLevels(
-    itemId: string, 
-    availableStock: number, 
-    reservedStock: number, 
+    itemId: string,
+    availableStock: number,
+    reservedStock: number,
     companyId?: string
   ): boolean {
-    const index = this.items.findIndex(item => item.id === itemId);
-    if (index === -1) return false;
+    const item = this.getItemById(itemId, companyId);
+    if (!item) return false;
 
-    // Verify company ownership
-    if (companyId && this.items[index].companyId !== companyId) return false;
-
-    this.items[index] = {
-      ...this.items[index],
+    const updated = this.inventoryRepo.updateStockLevels(
+      itemId,
       availableStock,
-      reservedStock,
-      updatedAt: new Date(),
-    };
+      reservedStock
+    );
 
-    return true;
+    return !!updated;
   }
 
   // Get activity logs for a specific company
   getActivityLogs(companyId?: string, itemId?: string): ActivityLog[] {
-    let logs = [...mockActivityLogs].filter(log => log.referenceType === 'inventory');
-    
-    if (companyId) {
-      logs = logs.filter(log => log.companyId === companyId);
-    }
-    
+    let logs = this.activityRepo.findAll(companyId).filter(
+      log => log.referenceType === 'inventory'
+    );
+
     if (itemId) {
       logs = logs.filter(log => log.referenceId === itemId);
     }
-    
+
     return logs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 }
 
+// Default singleton instance
 export const inventoryService = new InventoryService();

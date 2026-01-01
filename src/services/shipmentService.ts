@@ -1,26 +1,50 @@
 // Shipment Service - Centralized shipment business logic
 // All methods require companyId for data isolation
 // Implements transactional safety with rollback for multi-step operations
+// Uses repository pattern for data access
 
 import { Shipment, ShipmentStatus, ShipmentStats, ShipmentItem, ActivityType } from '@/domain/models';
-import { mockShipments } from '@/domain/mockData';
-import { reservationService } from './reservationService';
-import { activityService } from './activityService';
-import { inventoryService } from './inventoryService';
+import { 
+  IShipmentRepository, 
+  IInventoryRepository,
+  IReservationRepository,
+  IActivityRepository,
+  shipmentRepository as defaultShipmentRepo,
+  inventoryRepository as defaultInventoryRepo,
+  reservationRepository as defaultReservationRepo,
+  activityRepository as defaultActivityRepo,
+  InMemoryShipmentRepository
+} from '@/repositories';
+import { ReservationService } from './reservationService';
+import { ActivityService } from './activityService';
+import { InventoryService } from './inventoryService';
 import { TransactionContext, executeTransactionSync, TransactionResult } from './transactionService';
 
-class ShipmentService {
-  private shipments: Shipment[] = [...mockShipments];
+export class ShipmentService {
+  private reservationService: ReservationService;
+  private activityService: ActivityService;
+  private inventoryService: InventoryService;
+
+  constructor(
+    private shipmentRepo: IShipmentRepository = defaultShipmentRepo,
+    inventoryRepo: IInventoryRepository = defaultInventoryRepo,
+    reservationRepo: IReservationRepository = defaultReservationRepo,
+    activityRepo: IActivityRepository = defaultActivityRepo
+  ) {
+    this.inventoryService = new InventoryService(inventoryRepo, activityRepo);
+    this.reservationService = new ReservationService(reservationRepo, inventoryRepo, activityRepo);
+    this.activityService = new ActivityService(activityRepo);
+  }
 
   // Get all shipments, optionally scoped to company
   getAllShipments(companyId?: string): Shipment[] {
-    if (!companyId) return [...this.shipments];
-    return this.shipments.filter(s => s.companyId === companyId);
+    if (!companyId) return this.shipmentRepo.findAll();
+    return this.shipmentRepo.findByCompany(companyId);
   }
 
   // Get shipment by ID, scoped to company
   getShipmentById(id: string, companyId?: string): Shipment | undefined {
-    const shipment = this.shipments.find(shipment => shipment.id === id);
+    const shipment = this.shipmentRepo.findById(id);
     if (!shipment) return undefined;
     if (companyId && shipment.companyId !== companyId) return undefined;
     return shipment;
@@ -28,7 +52,7 @@ class ShipmentService {
 
   // Get shipment by number, scoped to company
   getShipmentByNumber(shipmentNumber: string, companyId?: string): Shipment | undefined {
-    const shipment = this.shipments.find(shipment => shipment.shipmentNumber === shipmentNumber);
+    const shipment = this.shipmentRepo.findByNumber(shipmentNumber);
     if (!shipment) return undefined;
     if (companyId && shipment.companyId !== companyId) return undefined;
     return shipment;
@@ -36,7 +60,7 @@ class ShipmentService {
 
   // Get shipments by status, scoped to company
   getShipmentsByStatus(status: ShipmentStatus, companyId?: string): Shipment[] {
-    return this.getAllShipments(companyId).filter(shipment => shipment.status === status);
+    return this.shipmentRepo.findByStatus(status, companyId);
   }
 
   // Get stats for a specific company
@@ -57,9 +81,9 @@ class ShipmentService {
    */
   validateItemsAvailability(items: ShipmentItem[], companyId?: string): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
-    
+
     for (const item of items) {
-      const inventoryItem = inventoryService.getItemById(item.inventoryItemId, companyId);
+      const inventoryItem = this.inventoryService.getItemById(item.inventoryItemId, companyId);
       if (!inventoryItem) {
         errors.push(`Item ${item.inventoryItemName} not found in inventory`);
         continue;
@@ -68,7 +92,7 @@ class ShipmentService {
         errors.push(`Insufficient stock for ${item.inventoryItemName}: requested ${item.quantity}, available ${inventoryItem.availableStock}`);
       }
     }
-    
+
     return { valid: errors.length === 0, errors };
   }
 
@@ -93,31 +117,33 @@ class ShipmentService {
 
       // Generate shipment ID first so we can use it for reservations
       const shipmentId = `ship-${Date.now()}`;
-      const shipmentNumber = `SHP-${new Date().getFullYear()}-${String(this.shipments.length + 1).padStart(3, '0')}`;
+      const shipmentCount = (this.shipmentRepo as InMemoryShipmentRepository).getCount?.() ?? 
+        this.shipmentRepo.findAll().length;
+      const shipmentNumber = `SHP-${new Date().getFullYear()}-${String(shipmentCount + 1).padStart(3, '0')}`;
 
       // Create reservations for all items with rollback tracking
       for (const item of items) {
-        const success = reservationService.createReservation(
+        const success = this.reservationService.createReservation(
           item.inventoryItemId,
           shipmentId,
           item.quantity,
           companyId
         );
-        
+
         if (!success) {
-          return { 
-            success: false, 
-            data: null, 
-            error: `Failed to reserve ${item.inventoryItemName}` 
+          return {
+            success: false,
+            data: null,
+            error: `Failed to reserve ${item.inventoryItemName}`
           };
         }
-        
+
         // Register rollback action for this reservation
         ctx.addRollback({
           description: `Cancel reservation for ${item.inventoryItemName}`,
-          execute: () => reservationService.cancelReservation(
-            item.inventoryItemId, 
-            shipmentId, 
+          execute: () => this.reservationService.cancelReservation(
+            item.inventoryItemId,
+            shipmentId,
             companyId
           ),
         });
@@ -136,24 +162,17 @@ class ShipmentService {
         updatedAt: new Date(),
       };
 
-      // Add shipment to list
-      this.shipments.push(newShipment);
+      // Add shipment to repository
+      this.shipmentRepo.create(newShipment);
 
       // Register rollback for shipment creation
       ctx.addRollback({
         description: `Remove shipment ${shipmentNumber}`,
-        execute: () => {
-          const idx = this.shipments.findIndex(s => s.id === shipmentId);
-          if (idx !== -1) {
-            this.shipments.splice(idx, 1);
-            return true;
-          }
-          return false;
-        },
+        execute: () => this.shipmentRepo.delete(shipmentId),
       });
 
       // Log activity with company association
-      const activityId = activityService.logActivity(
+      const activityId = this.activityService.logActivity(
         ActivityType.SHIPMENT_CREATED,
         `Created shipment ${shipmentNumber} for ${customerName}`,
         shipmentId,
@@ -166,7 +185,7 @@ class ShipmentService {
       if (activityId) {
         ctx.addRollback({
           description: `Remove activity log for shipment creation`,
-          execute: () => activityService.removeActivity(activityId),
+          execute: () => this.activityService.removeActivity(activityId),
         });
       }
 
@@ -182,30 +201,29 @@ class ShipmentService {
    * Scoped to company
    */
   updateStatus(
-    shipmentId: string, 
+    shipmentId: string,
     newStatus: ShipmentStatus,
     companyId?: string
   ): TransactionResult<Shipment> {
     return executeTransactionSync<Shipment>((ctx: TransactionContext) => {
-      const index = this.shipments.findIndex(s => s.id === shipmentId);
-      if (index === -1) {
+      const shipment = this.shipmentRepo.findById(shipmentId);
+      if (!shipment) {
         return { success: false, data: null, error: 'Shipment not found' };
       }
 
-      const shipment = this.shipments[index];
       const previousStatus = shipment.status;
-      
+
       // Verify company ownership
       if (companyId && shipment.companyId !== companyId) {
         return { success: false, data: null, error: 'Shipment not found' };
       }
-      
+
       // Validate status transition
       if (!this.canTransitionTo(shipment.status, newStatus)) {
-        return { 
-          success: false, 
-          data: null, 
-          error: `Cannot transition from ${shipment.status} to ${newStatus}` 
+        return {
+          success: false,
+          data: null,
+          error: `Cannot transition from ${shipment.status} to ${newStatus}`
         };
       }
 
@@ -214,11 +232,11 @@ class ShipmentService {
 
       // Handle status-specific logic
       if (newStatus === 'delivered') {
-        return this.handleDelivery(ctx, index, shipment, originalShipment);
+        return this.handleDelivery(ctx, shipment, originalShipment);
       } else if (newStatus === 'cancelled') {
-        return this.handleCancellation(ctx, index, shipment, originalShipment);
+        return this.handleCancellation(ctx, shipment, originalShipment);
       } else {
-        return this.handleStandardTransition(ctx, index, shipment, newStatus, previousStatus);
+        return this.handleStandardTransition(ctx, shipment, newStatus, previousStatus);
       }
     });
   }
@@ -228,37 +246,29 @@ class ShipmentService {
    */
   private handleDelivery(
     ctx: TransactionContext,
-    index: number,
     shipment: Shipment,
     originalShipment: Shipment
   ): TransactionResult<Shipment> {
-    const fulfilledItems: { inventoryItemId: string; quantity: number }[] = [];
-
     // Fulfill reservations for all items
     for (const item of shipment.items) {
-      const fulfilled = reservationService.fulfillReservation(
-        item.inventoryItemId, 
+      const fulfilled = this.reservationService.fulfillReservation(
+        item.inventoryItemId,
         shipment.id,
         shipment.companyId
       );
-      
+
       if (!fulfilled) {
-        return { 
-          success: false, 
-          data: null, 
-          error: `Failed to fulfill reservation for ${item.inventoryItemName}` 
+        return {
+          success: false,
+          data: null,
+          error: `Failed to fulfill reservation for ${item.inventoryItemName}`
         };
       }
-
-      fulfilledItems.push({ 
-        inventoryItemId: item.inventoryItemId, 
-        quantity: item.quantity 
-      });
 
       // Register rollback: restore reservation (move back from fulfilled to active)
       ctx.addRollback({
         description: `Restore reservation for ${item.inventoryItemName}`,
-        execute: () => reservationService.restoreReservation(
+        execute: () => this.reservationService.restoreReservation(
           item.inventoryItemId,
           shipment.id,
           item.quantity,
@@ -268,24 +278,22 @@ class ShipmentService {
     }
 
     // Update shipment status
-    this.shipments[index] = {
-      ...shipment,
-      status: 'delivered',
-      deliveredAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const updatedShipment = this.shipmentRepo.updateStatus(shipment.id, 'delivered', new Date());
 
     // Register rollback for shipment status
     ctx.addRollback({
       description: `Restore shipment to ${originalShipment.status}`,
       execute: () => {
-        this.shipments[index] = originalShipment;
+        this.shipmentRepo.update(shipment.id, {
+          status: originalShipment.status,
+          deliveredAt: originalShipment.deliveredAt,
+        });
         return true;
       },
     });
 
     // Log activity
-    const activityId = activityService.logActivity(
+    const activityId = this.activityService.logActivity(
       ActivityType.SHIPMENT_DELIVERED,
       `Shipment ${shipment.shipmentNumber} delivered`,
       shipment.id,
@@ -297,11 +305,11 @@ class ShipmentService {
     if (activityId) {
       ctx.addRollback({
         description: `Remove delivery activity log`,
-        execute: () => activityService.removeActivity(activityId),
+        execute: () => this.activityService.removeActivity(activityId),
       });
     }
 
-    return { success: true, data: this.shipments[index] };
+    return { success: true, data: updatedShipment! };
   }
 
   /**
@@ -309,33 +317,25 @@ class ShipmentService {
    */
   private handleCancellation(
     ctx: TransactionContext,
-    index: number,
     shipment: Shipment,
     originalShipment: Shipment
   ): TransactionResult<Shipment> {
-    const releasedItems: { inventoryItemId: string; quantity: number }[] = [];
-
     // Release reservations for all items
     for (const item of shipment.items) {
-      const released = reservationService.cancelReservation(
-        item.inventoryItemId, 
+      const released = this.reservationService.cancelReservation(
+        item.inventoryItemId,
         shipment.id,
         shipment.companyId
       );
-      
+
       if (!released) {
         console.warn(`Warning: Could not release reservation for ${item.inventoryItemName}`);
         // Continue anyway for cancellation - best effort
       } else {
-        releasedItems.push({ 
-          inventoryItemId: item.inventoryItemId, 
-          quantity: item.quantity 
-        });
-
         // Register rollback: re-reserve the inventory
         ctx.addRollback({
           description: `Re-reserve inventory for ${item.inventoryItemName}`,
-          execute: () => reservationService.createReservation(
+          execute: () => this.reservationService.createReservation(
             item.inventoryItemId,
             shipment.id,
             item.quantity,
@@ -346,23 +346,19 @@ class ShipmentService {
     }
 
     // Update shipment status
-    this.shipments[index] = {
-      ...shipment,
-      status: 'cancelled',
-      updatedAt: new Date(),
-    };
+    const updatedShipment = this.shipmentRepo.updateStatus(shipment.id, 'cancelled');
 
     // Register rollback for shipment status
     ctx.addRollback({
       description: `Restore shipment to ${originalShipment.status}`,
       execute: () => {
-        this.shipments[index] = originalShipment;
+        this.shipmentRepo.update(shipment.id, { status: originalShipment.status });
         return true;
       },
     });
 
     // Log activity
-    const activityId = activityService.logActivity(
+    const activityId = this.activityService.logActivity(
       ActivityType.SHIPMENT_CANCELLED,
       `Shipment ${shipment.shipmentNumber} cancelled - inventory released`,
       shipment.id,
@@ -374,11 +370,11 @@ class ShipmentService {
     if (activityId) {
       ctx.addRollback({
         description: `Remove cancellation activity log`,
-        execute: () => activityService.removeActivity(activityId),
+        execute: () => this.activityService.removeActivity(activityId),
       });
     }
 
-    return { success: true, data: this.shipments[index] };
+    return { success: true, data: updatedShipment! };
   }
 
   /**
@@ -386,7 +382,6 @@ class ShipmentService {
    */
   private handleStandardTransition(
     ctx: TransactionContext,
-    index: number,
     shipment: Shipment,
     newStatus: ShipmentStatus,
     previousStatus: ShipmentStatus
@@ -394,23 +389,19 @@ class ShipmentService {
     const originalShipment = { ...shipment };
 
     // Update shipment status
-    this.shipments[index] = {
-      ...shipment,
-      status: newStatus,
-      updatedAt: new Date(),
-    };
+    const updatedShipment = this.shipmentRepo.updateStatus(shipment.id, newStatus);
 
     // Register rollback
     ctx.addRollback({
       description: `Restore shipment to ${previousStatus}`,
       execute: () => {
-        this.shipments[index] = originalShipment;
+        this.shipmentRepo.update(shipment.id, { status: originalShipment.status });
         return true;
       },
     });
 
     // Log activity
-    const activityId = activityService.logActivity(
+    const activityId = this.activityService.logActivity(
       ActivityType.SHIPMENT_UPDATED,
       `Shipment ${shipment.shipmentNumber} status updated to ${newStatus}`,
       shipment.id,
@@ -422,28 +413,20 @@ class ShipmentService {
     if (activityId) {
       ctx.addRollback({
         description: `Remove status update activity log`,
-        execute: () => activityService.removeActivity(activityId),
+        execute: () => this.activityService.removeActivity(activityId),
       });
     }
 
-    return { success: true, data: this.shipments[index] };
+    return { success: true, data: updatedShipment! };
   }
 
   // Upload proof of delivery, scoped to company
   uploadProofOfDelivery(shipmentId: string, proofUrl: string, companyId?: string): Shipment | null {
-    const index = this.shipments.findIndex(s => s.id === shipmentId);
-    if (index === -1) return null;
+    const shipment = this.getShipmentById(shipmentId, companyId);
+    if (!shipment) return null;
 
-    // Verify company ownership
-    if (companyId && this.shipments[index].companyId !== companyId) return null;
-
-    this.shipments[index] = {
-      ...this.shipments[index],
-      proofOfDelivery: proofUrl,
-      updatedAt: new Date(),
-    };
-
-    return this.shipments[index];
+    const updated = this.shipmentRepo.update(shipmentId, { proofOfDelivery: proofUrl });
+    return updated || null;
   }
 
   getStatusFlow(): ShipmentStatus[] {
@@ -454,13 +437,13 @@ class ShipmentService {
     const flow = this.getStatusFlow();
     const currentIndex = flow.indexOf(currentStatus);
     const newIndex = flow.indexOf(newStatus);
-    
+
     // Cannot transition from delivered or cancelled
     if (currentStatus === 'delivered' || currentStatus === 'cancelled') return false;
-    
+
     // Can always cancel (unless delivered)
     if (newStatus === 'cancelled') return true;
-    
+
     // Can only move forward in the flow
     return newIndex === currentIndex + 1;
   }
@@ -476,12 +459,13 @@ class ShipmentService {
   getAvailableTransitions(currentStatus: ShipmentStatus): ShipmentStatus[] {
     const transitions: ShipmentStatus[] = [];
     const nextStatus = this.getNextStatus(currentStatus);
-    
+
     if (nextStatus) transitions.push(nextStatus);
     if (this.canTransitionTo(currentStatus, 'cancelled')) transitions.push('cancelled');
-    
+
     return transitions;
   }
 }
 
+// Default singleton instance
 export const shipmentService = new ShipmentService();
