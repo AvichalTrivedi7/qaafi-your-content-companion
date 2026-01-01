@@ -125,28 +125,28 @@ const Shipments = () => {
       shipmentItems
     );
 
-    if (result.success && result.shipment) {
-      toast.success(`Shipment ${result.shipment.shipmentNumber} created`);
+    if (result.success && result.data) {
+      toast.success(`Shipment ${result.data.shipmentNumber} created`);
       setNewCustomerName('');
       setNewDestination('');
       setShipmentItems([]);
       setIsCreateOpen(false);
       refreshData();
     } else {
-      toast.error(result.errors.join(', ') || 'Failed to create shipment');
+      toast.error(result.error || 'Failed to create shipment');
     }
   };
 
   const handleUpdateStatus = (shipmentId: string, newStatus: ShipmentStatus) => {
     const result = shipmentService.updateStatus(shipmentId, newStatus);
     
-    if (result.success && result.shipment) {
+    if (result.success && result.data) {
       toast.success(`Shipment updated to ${newStatus.replace('_', ' ')}`);
       refreshData();
       
       // Update selected shipment if in detail view
       if (selectedShipment?.id === shipmentId) {
-        setSelectedShipment(result.shipment);
+        setSelectedShipment(result.data);
       }
     } else {
       toast.error(result.error || 'Failed to update status');

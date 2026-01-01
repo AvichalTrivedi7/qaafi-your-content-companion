@@ -41,6 +41,7 @@ class ActivityService {
   }
 
   // Log activity with company association
+  // Returns the activity ID for potential rollback
   logActivity(
     type: ActivityType,
     description: string,
@@ -48,9 +49,9 @@ class ActivityService {
     referenceType?: 'inventory' | 'shipment' | 'reservation',
     metadata?: Record<string, unknown>,
     companyId?: string
-  ): ActivityLog {
+  ): string {
     const newLog: ActivityLog = {
-      id: `act-${Date.now()}`,
+      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type,
       description,
       referenceId,
@@ -61,7 +62,18 @@ class ActivityService {
     };
 
     this.logs.unshift(newLog);
-    return newLog;
+    return newLog.id;
+  }
+
+  /**
+   * Removes an activity log by ID (for rollback purposes)
+   */
+  removeActivity(activityId: string): boolean {
+    const index = this.logs.findIndex(log => log.id === activityId);
+    if (index === -1) return false;
+    
+    this.logs.splice(index, 1);
+    return true;
   }
 
   getActivityIcon(type: ActivityType): string {
