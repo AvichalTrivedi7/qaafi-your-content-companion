@@ -1,8 +1,13 @@
 // Services barrel export
-export { inventoryService } from './inventoryService';
-export { shipmentService } from './shipmentService';
-export { reservationService } from './reservationService';
-export { activityService } from './activityService';
+
+// Service classes (for dependency injection)
+export { InventoryService, inventoryService } from './inventoryService';
+export { ShipmentService, shipmentService } from './shipmentService';
+export { ReservationService, reservationService } from './reservationService';
+export { ActivityService, activityService } from './activityService';
+export { CompanyService, companyService } from './companyService';
 export { dashboardService } from './dashboardService';
+
+// Transaction support
 export { TransactionContext, executeTransaction, executeTransactionSync } from './transactionService';
 export type { RollbackAction, TransactionResult } from './transactionService';

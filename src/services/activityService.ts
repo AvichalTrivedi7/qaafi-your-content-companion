@@ -1,43 +1,40 @@
 // Activity Service - Centralized activity logging
 // All methods require companyId for data isolation
+// Uses repository pattern for data access
 
-import { ActivityLog, ActivityType } from '@/domain/models';
-import { mockActivityLogs } from '@/domain/mockData';
+import { ActivityLog, ActivityType, ReferenceType } from '@/domain/models';
+import { 
+  IActivityRepository, 
+  activityRepository as defaultActivityRepo 
+} from '@/repositories';
 
-class ActivityService {
-  private logs: ActivityLog[] = [...mockActivityLogs];
+export class ActivityService {
+  constructor(
+    private activityRepo: IActivityRepository = defaultActivityRepo
+  ) {}
 
   // Get all logs, optionally scoped to company
   getAllLogs(companyId?: string): ActivityLog[] {
-    let logs = [...this.logs];
-    if (companyId) {
-      logs = logs.filter(log => log.companyId === companyId);
-    }
-    return logs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return this.activityRepo.findAll(companyId);
   }
 
   // Get recent logs, optionally scoped to company
   getRecentLogs(limit: number = 10, companyId?: string): ActivityLog[] {
-    return this.getAllLogs(companyId).slice(0, limit);
+    return this.activityRepo.findRecent(limit, companyId);
   }
 
   // Get logs by type, optionally scoped to company
   getLogsByType(type: ActivityType, companyId?: string): ActivityLog[] {
-    return this.getAllLogs(companyId).filter(log => log.type === type);
+    return this.activityRepo.findByType(type, companyId);
   }
 
   // Get logs by reference, optionally scoped to company
   getLogsByReference(
-    referenceId: string, 
-    referenceType?: 'inventory' | 'shipment' | 'reservation',
+    referenceId: string,
+    referenceType?: ReferenceType,
     companyId?: string
   ): ActivityLog[] {
-    return this.getAllLogs(companyId).filter(log => {
-      if (referenceType) {
-        return log.referenceId === referenceId && log.referenceType === referenceType;
-      }
-      return log.referenceId === referenceId;
-    });
+    return this.activityRepo.findByReference(referenceId, referenceType, companyId);
   }
 
   // Log activity with company association
@@ -46,7 +43,7 @@ class ActivityService {
     type: ActivityType,
     description: string,
     referenceId?: string,
-    referenceType?: 'inventory' | 'shipment' | 'reservation',
+    referenceType?: ReferenceType,
     metadata?: Record<string, unknown>,
     companyId?: string
   ): string {
@@ -61,7 +58,7 @@ class ActivityService {
       createdAt: new Date(),
     };
 
-    this.logs.unshift(newLog);
+    this.activityRepo.create(newLog);
     return newLog.id;
   }
 
@@ -69,11 +66,7 @@ class ActivityService {
    * Removes an activity log by ID (for rollback purposes)
    */
   removeActivity(activityId: string): boolean {
-    const index = this.logs.findIndex(log => log.id === activityId);
-    if (index === -1) return false;
-    
-    this.logs.splice(index, 1);
-    return true;
+    return this.activityRepo.delete(activityId);
   }
 
   getActivityIcon(type: ActivityType): string {
@@ -105,4 +98,5 @@ class ActivityService {
   }
 }
 
+// Default singleton instance
 export const activityService = new ActivityService();

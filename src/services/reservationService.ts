@@ -1,34 +1,52 @@
 // Reservation Service - Centralized reservation business logic
 // All methods require companyId for data isolation
 // Supports transactional rollback operations
+// Uses repository pattern for data access
 
 import { Reservation, ActivityType } from '@/domain/models';
-import { mockReservations } from '@/domain/mockData';
-import { inventoryService } from './inventoryService';
-import { activityService } from './activityService';
+import { 
+  IReservationRepository, 
+  IInventoryRepository,
+  IActivityRepository,
+  reservationRepository as defaultReservationRepo,
+  inventoryRepository as defaultInventoryRepo,
+  activityRepository as defaultActivityRepo 
+} from '@/repositories';
+import { InventoryService } from './inventoryService';
+import { ActivityService } from './activityService';
 
-class ReservationService {
-  private reservations: Reservation[] = [...mockReservations];
+export class ReservationService {
+  private inventoryService: InventoryService;
+  private activityService: ActivityService;
+
+  constructor(
+    private reservationRepo: IReservationRepository = defaultReservationRepo,
+    inventoryRepo: IInventoryRepository = defaultInventoryRepo,
+    activityRepo: IActivityRepository = defaultActivityRepo
+  ) {
+    this.inventoryService = new InventoryService(inventoryRepo, activityRepo);
+    this.activityService = new ActivityService(activityRepo);
+  }
 
   // Get all reservations (internal use - reservations don't have companyId directly)
   getAllReservations(): Reservation[] {
-    return [...this.reservations];
+    return this.reservationRepo.findAll();
   }
 
   getReservationById(id: string): Reservation | undefined {
-    return this.reservations.find(res => res.id === id);
+    return this.reservationRepo.findById(id);
   }
 
   getReservationsByInventoryItem(inventoryItemId: string): Reservation[] {
-    return this.reservations.filter(res => res.inventoryItemId === inventoryItemId);
+    return this.reservationRepo.findByInventoryItem(inventoryItemId);
   }
 
   getReservationsByShipment(shipmentId: string): Reservation[] {
-    return this.reservations.filter(res => res.shipmentId === shipmentId);
+    return this.reservationRepo.findByShipment(shipmentId);
   }
 
   getActiveReservations(): Reservation[] {
-    return this.reservations.filter(res => res.status === 'active');
+    return this.reservationRepo.findByStatus('active');
   }
 
   /**
@@ -37,16 +55,16 @@ class ReservationService {
    * Verifies inventory item belongs to the specified company
    */
   createReservation(
-    inventoryItemId: string, 
-    shipmentId: string, 
+    inventoryItemId: string,
+    shipmentId: string,
     quantity: number,
     companyId?: string
   ): boolean {
-    const item = inventoryService.getItemById(inventoryItemId, companyId);
+    const item = this.inventoryService.getItemById(inventoryItemId, companyId);
     if (!item) return false;
 
     // Reserve stock in inventory (moves from available to reserved)
-    const success = inventoryService.reserveStock(inventoryItemId, quantity, companyId);
+    const success = this.inventoryService.reserveStock(inventoryItemId, quantity, companyId);
     if (!success) return false;
 
     const newReservation: Reservation = {
@@ -59,10 +77,10 @@ class ReservationService {
       updatedAt: new Date(),
     };
 
-    this.reservations.push(newReservation);
+    this.reservationRepo.create(newReservation);
 
     // Log activity with company association
-    activityService.logActivity(
+    this.activityService.logActivity(
       ActivityType.RESERVATION_CREATED,
       `Reserved ${quantity} ${item.unit} of ${item.name} for shipment`,
       newReservation.id,
@@ -80,36 +98,34 @@ class ReservationService {
    * Verifies inventory item belongs to the specified company
    */
   fulfillReservation(
-    inventoryItemId: string, 
+    inventoryItemId: string,
     shipmentId: string,
     companyId?: string
   ): boolean {
-    const index = this.reservations.findIndex(
-      res => res.inventoryItemId === inventoryItemId && 
-             res.shipmentId === shipmentId && 
-             res.status === 'active'
+    const reservation = this.reservationRepo.findActiveByInventoryAndShipment(
+      inventoryItemId,
+      shipmentId
     );
-    
-    if (index === -1) return false;
 
-    const reservation = this.reservations[index];
-    const item = inventoryService.getItemById(inventoryItemId, companyId);
-    
+    if (!reservation) return false;
+
+    const item = this.inventoryService.getItemById(inventoryItemId, companyId);
+
     // Verify company ownership
     if (companyId && (!item || item.companyId !== companyId)) return false;
-    
+
     // Fulfill in inventory (deduct from reserved - goods have left the warehouse)
-    const success = inventoryService.fulfillReservation(inventoryItemId, reservation.quantity, companyId);
+    const success = this.inventoryService.fulfillReservation(
+      inventoryItemId,
+      reservation.quantity,
+      companyId
+    );
     if (!success) return false;
 
-    this.reservations[index] = {
-      ...reservation,
-      status: 'fulfilled',
-      updatedAt: new Date(),
-    };
+    this.reservationRepo.updateStatus(reservation.id, 'fulfilled');
 
     // Log activity with company association
-    activityService.logActivity(
+    this.activityService.logActivity(
       ActivityType.INVENTORY_OUT,
       `Dispatched ${reservation.quantity} ${item?.unit || 'units'} of ${item?.name || 'item'}`,
       inventoryItemId,
@@ -132,28 +148,27 @@ class ReservationService {
     quantity: number,
     companyId?: string
   ): boolean {
-    const index = this.reservations.findIndex(
-      res => res.inventoryItemId === inventoryItemId && 
-             res.shipmentId === shipmentId && 
-             res.status === 'fulfilled'
+    const reservation = this.reservationRepo.findFulfilledByInventoryAndShipment(
+      inventoryItemId,
+      shipmentId
     );
-    
-    if (index === -1) return false;
 
-    const item = inventoryService.getItemById(inventoryItemId, companyId);
-    
+    if (!reservation) return false;
+
+    const item = this.inventoryService.getItemById(inventoryItemId, companyId);
+
     // Verify company ownership
     if (companyId && (!item || item.companyId !== companyId)) return false;
-    
+
     // Restore reserved stock in inventory
-    const success = inventoryService.restoreReservedStock(inventoryItemId, quantity, companyId);
+    const success = this.inventoryService.restoreReservedStock(
+      inventoryItemId,
+      quantity,
+      companyId
+    );
     if (!success) return false;
 
-    this.reservations[index] = {
-      ...this.reservations[index],
-      status: 'active',
-      updatedAt: new Date(),
-    };
+    this.reservationRepo.updateStatus(reservation.id, 'active');
 
     return true;
   }
@@ -164,36 +179,34 @@ class ReservationService {
    * Verifies inventory item belongs to the specified company
    */
   cancelReservation(
-    inventoryItemId: string, 
+    inventoryItemId: string,
     shipmentId: string,
     companyId?: string
   ): boolean {
-    const index = this.reservations.findIndex(
-      res => res.inventoryItemId === inventoryItemId && 
-             res.shipmentId === shipmentId && 
-             res.status === 'active'
+    const reservation = this.reservationRepo.findActiveByInventoryAndShipment(
+      inventoryItemId,
+      shipmentId
     );
-    
-    if (index === -1) return false;
 
-    const reservation = this.reservations[index];
-    const item = inventoryService.getItemById(inventoryItemId, companyId);
-    
+    if (!reservation) return false;
+
+    const item = this.inventoryService.getItemById(inventoryItemId, companyId);
+
     // Verify company ownership
     if (companyId && (!item || item.companyId !== companyId)) return false;
-    
+
     // Release back to available stock
-    const success = inventoryService.releaseReservation(inventoryItemId, reservation.quantity, companyId);
+    const success = this.inventoryService.releaseReservation(
+      inventoryItemId,
+      reservation.quantity,
+      companyId
+    );
     if (!success) return false;
 
-    this.reservations[index] = {
-      ...reservation,
-      status: 'cancelled',
-      updatedAt: new Date(),
-    };
+    this.reservationRepo.updateStatus(reservation.id, 'cancelled');
 
     // Log activity with company association
-    activityService.logActivity(
+    this.activityService.logActivity(
       ActivityType.RESERVATION_RELEASED,
       `Released ${reservation.quantity} ${item?.unit || 'units'} of ${item?.name || 'item'} back to available stock`,
       reservation.id,
@@ -210,14 +223,14 @@ class ReservationService {
    * Does NOT modify inventory - caller is responsible for inventory state
    */
   removeReservation(inventoryItemId: string, shipmentId: string): boolean {
-    const index = this.reservations.findIndex(
-      res => res.inventoryItemId === inventoryItemId && res.shipmentId === shipmentId
+    const reservation = this.reservationRepo.findByInventoryAndShipment(
+      inventoryItemId,
+      shipmentId
     );
-    
-    if (index === -1) return false;
-    
-    this.reservations.splice(index, 1);
-    return true;
+
+    if (!reservation) return false;
+
+    return this.reservationRepo.delete(reservation.id);
   }
 
   getTotalReservedForItem(inventoryItemId: string): number {
@@ -227,4 +240,5 @@ class ReservationService {
   }
 }
 
+// Default singleton instance
 export const reservationService = new ReservationService();
