@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string
+          id: string
+          metadata: Json | null
+          reference_id: string | null
+          reference_type: Database["public"]["Enums"]["reference_type"] | null
+          type: Database["public"]["Enums"]["activity_type"]
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description: string
+          id?: string
+          metadata?: Json | null
+          reference_id?: string | null
+          reference_type?: Database["public"]["Enums"]["reference_type"] | null
+          type: Database["public"]["Enums"]["activity_type"]
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          metadata?: Json | null
+          reference_id?: string | null
+          reference_type?: Database["public"]["Enums"]["reference_type"] | null
+          type?: Database["public"]["Enums"]["activity_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           access_code: string | null
@@ -44,6 +85,56 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_items: {
+        Row: {
+          available_stock: number
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          low_stock_threshold: number
+          name: string
+          reserved_stock: number
+          sku: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          available_stock?: number
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          low_stock_threshold?: number
+          name: string
+          reserved_stock?: number
+          sku: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          available_stock?: number
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          low_stock_threshold?: number
+          name?: string
+          reserved_stock?: number
+          sku?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company_id: string | null
@@ -72,6 +163,111 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reservations: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          inventory_item_id: string
+          quantity: number
+          shipment_id: string
+          status: Database["public"]["Enums"]["reservation_status"]
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          inventory_item_id: string
+          quantity: number
+          shipment_id: string
+          status?: Database["public"]["Enums"]["reservation_status"]
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          inventory_item_id?: string
+          quantity?: number
+          shipment_id?: string
+          status?: Database["public"]["Enums"]["reservation_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservations_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservations_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shipments: {
+        Row: {
+          company_id: string
+          created_at: string
+          customer_name: string
+          delivered_at: string | null
+          destination: string
+          id: string
+          items: Json
+          proof_of_delivery: string | null
+          shipment_number: string
+          status: Database["public"]["Enums"]["shipment_status"]
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          customer_name: string
+          delivered_at?: string | null
+          destination: string
+          id?: string
+          items?: Json
+          proof_of_delivery?: string | null
+          shipment_number: string
+          status?: Database["public"]["Enums"]["shipment_status"]
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          customer_name?: string
+          delivered_at?: string | null
+          destination?: string
+          id?: string
+          items?: Json
+          proof_of_delivery?: string | null
+          shipment_number?: string
+          status?: Database["public"]["Enums"]["shipment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipments_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -115,8 +311,20 @@ export type Database = {
       }
     }
     Enums: {
+      activity_type:
+        | "INVENTORY_IN"
+        | "INVENTORY_OUT"
+        | "SHIPMENT_CREATED"
+        | "SHIPMENT_UPDATED"
+        | "SHIPMENT_DELIVERED"
+        | "SHIPMENT_CANCELLED"
+        | "RESERVATION_CREATED"
+        | "RESERVATION_RELEASED"
       app_role: "admin" | "user"
       company_type: "supplier" | "wholesaler" | "retailer" | "manufacturer"
+      reference_type: "inventory" | "shipment" | "reservation"
+      reservation_status: "active" | "fulfilled" | "cancelled"
+      shipment_status: "pending" | "in_transit" | "delivered" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -244,8 +452,21 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      activity_type: [
+        "INVENTORY_IN",
+        "INVENTORY_OUT",
+        "SHIPMENT_CREATED",
+        "SHIPMENT_UPDATED",
+        "SHIPMENT_DELIVERED",
+        "SHIPMENT_CANCELLED",
+        "RESERVATION_CREATED",
+        "RESERVATION_RELEASED",
+      ],
       app_role: ["admin", "user"],
       company_type: ["supplier", "wholesaler", "retailer", "manufacturer"],
+      reference_type: ["inventory", "shipment", "reservation"],
+      reservation_status: ["active", "fulfilled", "cancelled"],
+      shipment_status: ["pending", "in_transit", "delivered", "cancelled"],
     },
   },
 } as const
