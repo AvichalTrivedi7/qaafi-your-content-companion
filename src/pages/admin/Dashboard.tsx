@@ -1,5 +1,8 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/AdminLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { StatCard } from '@/components/StatCard';
 import { ActivityItem } from '@/components/ActivityItem';
 import { dashboardService } from '@/services/dashboardService';
@@ -18,8 +21,31 @@ import { Badge } from '@/components/ui/badge';
 
 const AdminDashboard = () => {
   const { t } = useLanguage();
+  const { canViewDashboard, isLoading } = useAuth();
+  const navigate = useNavigate();
   const stats = dashboardService.getStats();
   const companyStats = companyService.getStats();
+
+  // Redirect if user doesn't have dashboard access
+  useEffect(() => {
+    if (!isLoading && !canViewDashboard) {
+      navigate('/admin/shipments');
+    }
+  }, [canViewDashboard, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (!canViewDashboard) {
+    return null;
+  }
 
   return (
     <AdminLayout>
