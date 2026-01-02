@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { Button } from '@/components/ui/button';
 
@@ -47,16 +48,53 @@ interface AdminLayoutProps {
 
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { t } = useLanguage();
+  const { canViewDashboard, canViewInventory, canViewShipments, isAdmin } = useAuth();
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  const navItems = [
-    { to: '/admin', icon: <LayoutDashboard className="h-5 w-5" />, label: t('nav.dashboard') },
-    { to: '/admin/companies', icon: <Building2 className="h-5 w-5" />, label: t('nav.companies') },
-    { to: '/admin/inventory', icon: <Package className="h-5 w-5" />, label: t('nav.inventory') },
-    { to: '/admin/shipments', icon: <Truck className="h-5 w-5" />, label: t('nav.shipments') },
-  ];
+  // Build nav items based on user permissions
+  const navItems = useMemo(() => {
+    const items = [];
+    
+    // Dashboard - admins only
+    if (canViewDashboard) {
+      items.push({ 
+        to: '/admin', 
+        icon: <LayoutDashboard className="h-5 w-5" />, 
+        label: t('nav.dashboard') 
+      });
+    }
+    
+    // Companies - admins only
+    if (isAdmin) {
+      items.push({ 
+        to: '/admin/companies', 
+        icon: <Building2 className="h-5 w-5" />, 
+        label: t('nav.companies') 
+      });
+    }
+    
+    // Inventory - admins only
+    if (canViewInventory) {
+      items.push({ 
+        to: '/admin/inventory', 
+        icon: <Package className="h-5 w-5" />, 
+        label: t('nav.inventory') 
+      });
+    }
+    
+    // Shipments - admins, logistics, retailers (with different permissions)
+    if (canViewShipments) {
+      items.push({ 
+        to: '/admin/shipments', 
+        icon: <Truck className="h-5 w-5" />, 
+        label: t('nav.shipments') 
+      });
+    }
+    
+    return items;
+  }, [canViewDashboard, canViewInventory, canViewShipments, isAdmin, t]);
 
   return (
     <div className="min-h-screen bg-background">

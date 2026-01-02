@@ -12,6 +12,8 @@ export type CompanyType = typeof CompanyType[keyof typeof CompanyType];
 export const AppRole = {
   ADMIN: 'admin',
   USER: 'user',
+  LOGISTICS: 'logistics',
+  RETAILER: 'retailer',
 } as const;
 
 export type AppRole = typeof AppRole[keyof typeof AppRole];

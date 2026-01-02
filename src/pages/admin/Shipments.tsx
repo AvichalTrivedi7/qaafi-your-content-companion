@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AdminLayout } from '@/components/AdminLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { shipmentService } from '@/services/shipmentService';
 import { companyService } from '@/services/companyService';
 import { inventoryService } from '@/services/inventoryService';
@@ -43,6 +44,7 @@ import { format } from 'date-fns';
 const AdminShipments = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const { canUpdateShipments, isAdmin } = useAuth();
   const [shipments, setShipments] = useState<Shipment[]>(shipmentService.getAllShipments());
   const companies = companyService.getAll();
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,10 +118,13 @@ const AdminShipments = () => {
             <p className="text-muted-foreground">{t('admin.shipmentsSubtitle')}</p>
           </div>
           
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('shipments.createShipment')}
-          </Button>
+          {/* Create button - admins only */}
+          {isAdmin && (
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('shipments.createShipment')}
+            </Button>
+          )}
         </div>
 
         {/* Filters */}
@@ -217,18 +222,20 @@ const AdminShipments = () => {
                   )}
                 </div>
                 
-                {/* Actions */}
-                <div className="pt-3 border-t border-border">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full"
-                    onClick={() => openStatusDialog(shipment)}
-                    disabled={shipment.status === 'delivered' || shipment.status === 'cancelled'}
-                  >
-                    {t('shipments.updateStatus')}
-                  </Button>
-                </div>
+                {/* Actions - only show update button if user can update shipments */}
+                {canUpdateShipments && (
+                  <div className="pt-3 border-t border-border">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => openStatusDialog(shipment)}
+                      disabled={shipment.status === 'delivered' || shipment.status === 'cancelled'}
+                    >
+                      {t('shipments.updateStatus')}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}

@@ -1,9 +1,11 @@
 import { AdminLayout } from '@/components/AdminLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { inventoryService } from '@/services/inventoryService';
 import { companyService } from '@/services/companyService';
 import { InventoryItem } from '@/domain/models';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Package, 
   Plus, 
@@ -48,6 +50,8 @@ import { format } from 'date-fns';
 const AdminInventory = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const { canViewInventory, isLoading } = useAuth();
+  const navigate = useNavigate();
   const [inventory, setInventory] = useState<InventoryItem[]>(inventoryService.getAllItems());
   const companies = companyService.getAll();
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,12 +61,33 @@ const AdminInventory = () => {
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [stockQuantity, setStockQuantity] = useState('');
 
+  // Redirect if user doesn't have inventory access
+  useEffect(() => {
+    if (!isLoading && !canViewInventory) {
+      navigate('/admin/shipments');
+    }
+  }, [canViewInventory, isLoading, navigate]);
+
   const filteredInventory = inventory.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.sku.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCompany = filterCompany === 'all' || item.companyId === filterCompany;
     return matchesSearch && matchesCompany;
   });
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (!canViewInventory) {
+    return null;
+  }
 
   const getCompanyName = (companyId?: string) => {
     if (!companyId) return '-';
