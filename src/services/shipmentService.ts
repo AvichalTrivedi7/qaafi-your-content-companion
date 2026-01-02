@@ -12,8 +12,7 @@ import {
   shipmentRepository as defaultShipmentRepo,
   inventoryRepository as defaultInventoryRepo,
   reservationRepository as defaultReservationRepo,
-  activityRepository as defaultActivityRepo,
-  InMemoryShipmentRepository
+  activityRepository as defaultActivityRepo
 } from '@/repositories';
 import { ReservationService } from './reservationService';
 import { ActivityService } from './activityService';
@@ -117,10 +116,8 @@ export class ShipmentService {
 
       // Generate shipment ID first so we can use it for reservations
       const shipmentId = `ship-${Date.now()}`;
-      const shipmentCount = (this.shipmentRepo as InMemoryShipmentRepository).getCount?.() ?? 
-        this.shipmentRepo.findAll().length;
+      const shipmentCount = this.shipmentRepo.findAll().length;
       const shipmentNumber = `SHP-${new Date().getFullYear()}-${String(shipmentCount + 1).padStart(3, '0')}`;
-
       // Create reservations for all items with rollback tracking
       for (const item of items) {
         const success = this.reservationService.createReservation(
