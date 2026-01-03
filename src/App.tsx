@@ -6,9 +6,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 // Pages
 import Access from "./pages/Access";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 // Admin Pages
@@ -34,14 +36,15 @@ const App = () => (
             <Sonner />
             <BrowserRouter>
               <Routes>
-                {/* Access Entry */}
+                {/* Public Routes */}
                 <Route path="/" element={<Access />} />
+                <Route path="/auth" element={<Auth />} />
                 
-                {/* Admin Routes */}
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/admin/companies" element={<AdminCompanies />} />
-                <Route path="/admin/inventory" element={<AdminInventory />} />
-                <Route path="/admin/shipments" element={<AdminShipments />} />
+                {/* Protected Admin Routes */}
+                <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+                <Route path="/admin/companies" element={<ProtectedRoute><AdminCompanies /></ProtectedRoute>} />
+                <Route path="/admin/inventory" element={<ProtectedRoute><AdminInventory /></ProtectedRoute>} />
+                <Route path="/admin/shipments" element={<ProtectedRoute><AdminShipments /></ProtectedRoute>} />
                 
                 {/* External Portal Routes */}
                 <Route path="/portal" element={<ExternalDashboard />} />
