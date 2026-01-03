@@ -320,7 +320,13 @@ export type Database = {
         | "SHIPMENT_CANCELLED"
         | "RESERVATION_CREATED"
         | "RESERVATION_RELEASED"
-      app_role: "admin" | "user" | "logistics" | "retailer"
+      app_role:
+        | "admin"
+        | "user"
+        | "logistics"
+        | "retailer"
+        | "pending"
+        | "wholesaler"
       company_type: "supplier" | "wholesaler" | "retailer" | "manufacturer"
       reference_type: "inventory" | "shipment" | "reservation"
       reservation_status: "active" | "fulfilled" | "cancelled"
@@ -462,7 +468,14 @@ export const Constants = {
         "RESERVATION_CREATED",
         "RESERVATION_RELEASED",
       ],
-      app_role: ["admin", "user", "logistics", "retailer"],
+      app_role: [
+        "admin",
+        "user",
+        "logistics",
+        "retailer",
+        "pending",
+        "wholesaler",
+      ],
       company_type: ["supplier", "wholesaler", "retailer", "manufacturer"],
       reference_type: ["inventory", "shipment", "reservation"],
       reservation_status: ["active", "fulfilled", "cancelled"],
