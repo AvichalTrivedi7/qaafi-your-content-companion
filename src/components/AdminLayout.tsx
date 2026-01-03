@@ -1,21 +1,22 @@
 import { useState, useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Package, 
   Truck, 
   Building2,
-  Settings, 
   Menu, 
   X,
   ChevronLeft,
-  Shield
+  Shield,
+  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface NavItemProps {
   to: string;
@@ -48,10 +49,24 @@ interface AdminLayoutProps {
 
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { t } = useLanguage();
-  const { canViewDashboard, canViewInventory, canViewShipments, isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { canViewDashboard, canViewInventory, canViewShipments, isAdmin, isLogistics, isRetailer, signOut, user } = useAuth();
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
+  };
+
+  // Get role display name
+  const getRoleBadge = () => {
+    if (isAdmin) return t('role.admin');
+    if (isLogistics) return t('role.logistics');
+    if (isRetailer) return t('role.retailer');
+    return 'User';
+  };
 
   // Build nav items based on user permissions
   const navItems = useMemo(() => {
@@ -164,10 +179,28 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
         </nav>
 
         <div className={cn(
-          'p-3 border-t border-sidebar-border',
-          isCollapsed && 'flex justify-center'
+          'p-3 border-t border-sidebar-border space-y-3',
+          isCollapsed && 'flex flex-col items-center'
         )}>
-          {!isCollapsed && <LanguageToggle />}
+          {!isCollapsed && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                  {getRoleBadge()}
+                </Badge>
+              </div>
+              <LanguageToggle />
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size={isCollapsed ? 'icon' : 'sm'}
+            onClick={handleLogout}
+            className="w-full text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          >
+            <LogOut className="h-4 w-4" />
+            {!isCollapsed && <span className="ml-2">{t('auth.logout')}</span>}
+          </Button>
         </div>
       </aside>
 
@@ -186,7 +219,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <nav className="p-3 space-y-1">
+        <nav className="flex-1 p-3 space-y-1">
           {navItems.map((item) => (
             <NavItem
               key={item.to}
@@ -195,6 +228,22 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
             />
           ))}
         </nav>
+        <div className="p-3 border-t border-sidebar-border space-y-2">
+          <div className="flex items-center justify-between">
+            <Badge variant="secondary" className="text-xs">
+              {getRoleBadge()}
+            </Badge>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="w-full text-sidebar-foreground/80 hover:bg-sidebar-accent"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            {t('auth.logout')}
+          </Button>
+        </div>
       </aside>
 
       {/* Main Content */}

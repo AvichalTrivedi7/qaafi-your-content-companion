@@ -121,6 +121,7 @@ const translations: Translations = {
   
   // Admin
   'admin.dashboard': { en: 'Admin Dashboard', hi: 'एडमिन डैशबोर्ड' },
+  'admin.controlPanel': { en: 'Control Panel', hi: 'कंट्रोल पैनल' },
   'admin.dashboardSubtitle': { en: 'System-wide overview and management', hi: 'सिस्टम-व्यापी अवलोकन और प्रबंधन' },
   'admin.companies': { en: 'Companies', hi: 'कंपनियाँ' },
   'admin.companiesSubtitle': { en: 'Manage suppliers, wholesalers, and retailers', hi: 'सप्लायर, थोक विक्रेता, और खुदरा विक्रेता प्रबंधित करें' },
@@ -168,6 +169,20 @@ const translations: Translations = {
   'access.submit': { en: 'Access Portal', hi: 'पोर्टल एक्सेस करें' },
   'access.invalidCode': { en: 'Invalid access code', hi: 'अमान्य एक्सेस कोड' },
   'access.companyInactive': { en: 'Company is inactive', hi: 'कंपनी निष्क्रिय है' },
+  
+  // Auth
+  'auth.login': { en: 'Login', hi: 'लॉगिन' },
+  'auth.signup': { en: 'Sign Up', hi: 'साइन अप' },
+  'auth.logout': { en: 'Logout', hi: 'लॉगआउट' },
+  'auth.email': { en: 'Email', hi: 'ईमेल' },
+  'auth.password': { en: 'Password', hi: 'पासवर्ड' },
+  'auth.loginDescription': { en: 'Sign in to your account', hi: 'अपने खाते में साइन इन करें' },
+  'auth.signupDescription': { en: 'Create a new account', hi: 'नया खाता बनाएं' },
+  'auth.noAccount': { en: "Don't have an account? Sign up", hi: 'खाता नहीं है? साइन अप करें' },
+  'auth.hasAccount': { en: 'Already have an account? Login', hi: 'पहले से खाता है? लॉगिन करें' },
+  
+  // Common
+  'common.back': { en: 'Back', hi: 'वापस' },
   
   // Errors / Not Found
   'error.pageNotFound': { en: 'Oops! Page not found', hi: 'उफ़! पेज नहीं मिला' },

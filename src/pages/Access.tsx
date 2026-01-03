@@ -18,7 +18,7 @@ const Access = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAdminAccess = () => {
-    navigate('/admin');
+    navigate('/auth');
   };
 
   const handleExternalAccess = () => {
