@@ -3,6 +3,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { inventoryService } from '@/services/inventoryService';
 import { companyService } from '@/services/companyService';
+import { inventoryRepository } from '@/repositories';
 import { InventoryItem } from '@/domain/models';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -60,6 +61,13 @@ const AdminInventory = () => {
   const [stockAction, setStockAction] = useState<'in' | 'out'>('in');
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [stockQuantity, setStockQuantity] = useState('');
+  
+  // Add Product dialog state
+  const [addProductDialogOpen, setAddProductDialogOpen] = useState(false);
+  const [newProductName, setNewProductName] = useState('');
+  const [newProductSku, setNewProductSku] = useState('');
+  const [newProductUnit, setNewProductUnit] = useState('pieces');
+  const [newProductLowStockThreshold, setNewProductLowStockThreshold] = useState('10');
 
   // Redirect if user doesn't have inventory access
   useEffect(() => {
@@ -128,6 +136,37 @@ const AdminInventory = () => {
     setStockDialogOpen(false);
   };
 
+  const handleAddProduct = () => {
+    if (!newProductName.trim() || !newProductSku.trim()) return;
+    
+    const newItem: InventoryItem = {
+      id: crypto.randomUUID(),
+      sku: newProductSku.trim(),
+      name: newProductName.trim(),
+      unit: newProductUnit,
+      availableStock: 0,
+      reservedStock: 0,
+      lowStockThreshold: parseInt(newProductLowStockThreshold) || 10,
+      companyId: filterCompany !== 'all' ? filterCompany : undefined,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    inventoryRepository.create(newItem);
+    setInventory(inventoryService.getAllItems());
+    
+    setNewProductName('');
+    setNewProductSku('');
+    setNewProductUnit('pieces');
+    setNewProductLowStockThreshold('10');
+    setAddProductDialogOpen(false);
+    
+    toast({ 
+      title: t('inventory.productAdded'),
+      description: newProductName 
+    });
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -138,7 +177,7 @@ const AdminInventory = () => {
             <p className="text-muted-foreground">{t('admin.inventorySubtitle')}</p>
           </div>
           
-          <Button>
+          <Button onClick={() => setAddProductDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             {t('inventory.addProduct')}
           </Button>
@@ -297,6 +336,72 @@ const AdminInventory = () => {
                 variant={stockAction === 'in' ? 'default' : 'outline'}
               >
                 {stockAction === 'in' ? t('inventory.stockIn') : t('inventory.stockOut')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Product Dialog */}
+        <Dialog open={addProductDialogOpen} onOpenChange={setAddProductDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('inventory.addProduct')}</DialogTitle>
+              <DialogDescription>
+                {t('inventory.addProductDescription')}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>{t('inventory.productName')}</Label>
+                <Input
+                  value={newProductName}
+                  onChange={(e) => setNewProductName(e.target.value)}
+                  placeholder={t('inventory.enterProductName')}
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label>{t('inventory.sku')}</Label>
+                <Input
+                  value={newProductSku}
+                  onChange={(e) => setNewProductSku(e.target.value)}
+                  placeholder={t('inventory.enterSku')}
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label>{t('inventory.unit')}</Label>
+                <Select value={newProductUnit} onValueChange={setNewProductUnit}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pieces">{t('inventory.pieces')}</SelectItem>
+                    <SelectItem value="meters">{t('inventory.meters')}</SelectItem>
+                    <SelectItem value="kg">{t('inventory.kg')}</SelectItem>
+                    <SelectItem value="liters">{t('inventory.liters')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label>{t('inventory.lowStockThreshold')}</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={newProductLowStockThreshold}
+                  onChange={(e) => setNewProductLowStockThreshold(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAddProductDialogOpen(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button onClick={handleAddProduct}>
+                {t('common.add')}
               </Button>
             </DialogFooter>
           </DialogContent>
