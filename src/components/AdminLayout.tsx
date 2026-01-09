@@ -60,13 +60,10 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     navigate('/');
   };
 
-  // Get role display name
+  // Get role display name - Admin or User only
   const getRoleBadge = () => {
     if (isAdmin) return t('role.admin');
-    if (isWholesaler) return t('role.wholesaler') || 'Wholesaler';
-    if (isLogistics) return t('role.logistics');
-    if (isRetailer) return t('role.retailer');
-    return 'User';
+    return t('role.user');
   };
 
   // Build nav items based on user permissions
