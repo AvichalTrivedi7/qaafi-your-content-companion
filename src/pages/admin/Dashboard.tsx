@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/AdminLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -26,12 +25,6 @@ const AdminDashboard = () => {
   const stats = dashboardService.getStats();
   const companyStats = companyService.getStats();
 
-  // Redirect if user doesn't have dashboard access
-  useEffect(() => {
-    if (!isLoading && !canViewDashboard) {
-      navigate('/admin/shipments');
-    }
-  }, [canViewDashboard, isLoading, navigate]);
 
   if (isLoading) {
     return (
