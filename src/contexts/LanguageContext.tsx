@@ -57,6 +57,14 @@ const translations: Translations = {
   'inventory.lowStock': { en: 'Low Stock', hi: 'कम स्टॉक' },
   'inventory.inStock': { en: 'In Stock', hi: 'स्टॉक में' },
   'inventory.searchProducts': { en: 'Search products...', hi: 'प्रोडक्ट खोजें...' },
+  'inventory.sku': { en: 'SKU', hi: 'SKU' },
+  'inventory.lowStockThreshold': { en: 'Low Stock Threshold', hi: 'कम स्टॉक सीमा' },
+  'inventory.enterProductName': { en: 'Enter product name', hi: 'उत्पाद का नाम दर्ज करें' },
+  'inventory.enterSku': { en: 'Enter SKU', hi: 'SKU दर्ज करें' },
+  'inventory.productAdded': { en: 'Product added successfully', hi: 'उत्पाद सफलतापूर्वक जोड़ा गया' },
+  'inventory.addProductDescription': { en: 'Add a new product to your inventory', hi: 'अपनी इन्वेंटरी में नया उत्पाद जोड़ें' },
+  'inventory.kg': { en: 'Kilograms', hi: 'किलोग्राम' },
+  'inventory.liters': { en: 'Liters', hi: 'लीटर' },
   
   // Shipments
   'shipments.title': { en: 'Shipments', hi: 'शिपमेंट' },
