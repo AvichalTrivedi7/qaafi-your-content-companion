@@ -18,6 +18,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   roles: Role[];
   isLoading: boolean;
+  rolesLoaded: boolean;
   isAuthenticated: boolean;
   // Role checking helpers
   hasRole: (role: Role) => boolean;
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [rolesLoaded, setRolesLoaded] = useState(false);
 
   // Fetch user profile and roles
   const fetchUserData = useCallback(async (userId: string) => {
@@ -80,8 +82,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (rolesData) {
         setRoles(rolesData.map(r => r.role as Role));
       }
+      setRolesLoaded(true);
     } catch (error) {
       console.error('Error fetching user data:', error);
+      setRolesLoaded(true); // Still mark as loaded to prevent infinite wait
     }
   }, []);
 
@@ -100,6 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setProfile(null);
           setRoles([]);
+          setRolesLoaded(false);
         }
         setIsLoading(false);
       }
@@ -149,6 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
     setProfile(null);
     setRoles([]);
+    setRolesLoaded(false);
   };
 
   const value: AuthContextType = {
@@ -157,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile,
     roles,
     isLoading,
+    rolesLoaded,
     isAuthenticated: !!user,
     hasRole,
     hasAnyRole,

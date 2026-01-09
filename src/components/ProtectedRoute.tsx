@@ -14,8 +14,9 @@ export function ProtectedRoute({
   requiredRoles,
   redirectTo = '/' 
 }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, roles, hasAnyRole } = useAuth();
+  const { isAuthenticated, isLoading, roles, hasAnyRole, rolesLoaded } = useAuth();
 
+  // Wait for auth to complete
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -27,6 +28,15 @@ export function ProtectedRoute({
   // Not authenticated - redirect to login
   if (!isAuthenticated) {
     return <Navigate to={redirectTo} replace />;
+  }
+
+  // Wait for roles to load before making routing decisions
+  if (!rolesLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   // Check for pending role - redirect to pending approval page
