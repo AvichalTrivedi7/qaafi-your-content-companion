@@ -39,11 +39,6 @@ export function ProtectedRoute({
     );
   }
 
-  // Check for pending role - redirect to pending approval page
-  if (roles.includes(AppRole.PENDING)) {
-    return <Navigate to="/pending" replace />;
-  }
-
   // If specific roles are required, check them
   if (requiredRoles && requiredRoles.length > 0) {
     if (!hasAnyRole(requiredRoles)) {

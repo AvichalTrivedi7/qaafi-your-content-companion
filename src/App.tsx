@@ -10,7 +10,6 @@ import { ProtectedRoute, AdminRoute } from "@/components/ProtectedRoute";
 
 // Pages
 import Auth from "./pages/Auth";
-import PendingApproval from "./pages/PendingApproval";
 import NotFound from "./pages/NotFound";
 
 // Dashboard (role-based single dashboard)
@@ -33,9 +32,6 @@ const App = () => (
               <Routes>
                 {/* Public Routes - Auth is the main entry point */}
                 <Route path="/" element={<Auth />} />
-                
-                {/* Pending Approval Page */}
-                <Route path="/pending" element={<PendingApproval />} />
                 
                 {/* Protected Dashboard Routes - single dashboard, role-based UI */}
                 <Route path="/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
