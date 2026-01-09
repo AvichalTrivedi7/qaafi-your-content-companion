@@ -25,12 +25,16 @@ interface AuthContextType {
   isAdmin: boolean;
   isLogistics: boolean;
   isRetailer: boolean;
+  isWholesaler: boolean;
+  isPending: boolean;
   // Permissions based on roles
   canViewInventory: boolean;
   canViewDashboard: boolean;
   canViewSettings: boolean;
   canViewShipments: boolean;
   canUpdateShipments: boolean;
+  canManageInventory: boolean;
+  canCreateShipments: boolean;
   // Auth actions
   signOut: () => Promise<void>;
 }
@@ -123,16 +127,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = hasRole(AppRole.ADMIN);
   const isLogistics = hasRole(AppRole.LOGISTICS);
   const isRetailer = hasRole(AppRole.RETAILER);
+  const isWholesaler = hasRole(AppRole.WHOLESALER);
+  const isPending = hasRole(AppRole.PENDING);
 
   // Permission flags based on requirements:
-  // - Admins can access inventory, dashboard, and settings
-  // - Logistics users can view and update shipments
-  // - Retailers can view shipment status only
-  const canViewInventory = isAdmin;
-  const canViewDashboard = isAdmin;
+  // - Admins: Full access to everything
+  // - Wholesalers: Can manage inventory and shipments
+  // - Logistics: Can view and update shipments
+  // - Retailers: Can view shipment status only
+  const canViewInventory = isAdmin || isWholesaler;
+  const canManageInventory = isAdmin || isWholesaler;
+  const canViewDashboard = isAdmin || isWholesaler || isLogistics || isRetailer;
   const canViewSettings = isAdmin;
-  const canViewShipments = isAdmin || isLogistics || isRetailer;
-  const canUpdateShipments = isAdmin || isLogistics;
+  const canViewShipments = isAdmin || isWholesaler || isLogistics || isRetailer;
+  const canUpdateShipments = isAdmin || isWholesaler || isLogistics;
+  const canCreateShipments = isAdmin || isWholesaler;
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -154,11 +163,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAdmin,
     isLogistics,
     isRetailer,
+    isWholesaler,
+    isPending,
     canViewInventory,
     canViewDashboard,
     canViewSettings,
     canViewShipments,
     canUpdateShipments,
+    canManageInventory,
+    canCreateShipments,
     signOut,
   };
 

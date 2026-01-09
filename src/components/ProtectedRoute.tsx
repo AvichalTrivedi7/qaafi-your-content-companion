@@ -1,13 +1,20 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+import { AppRole } from '@/domain/database.types';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiredRoles?: (typeof AppRole[keyof typeof AppRole])[];
+  redirectTo?: string;
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+export function ProtectedRoute({ 
+  children, 
+  requiredRoles,
+  redirectTo = '/' 
+}: ProtectedRouteProps) {
+  const { isAuthenticated, isLoading, roles, hasAnyRole } = useAuth();
 
   if (isLoading) {
     return (
@@ -17,9 +24,32 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
+  // Not authenticated - redirect to login
   if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to={redirectTo} replace />;
+  }
+
+  // Check for pending role - redirect to pending approval page
+  if (roles.includes(AppRole.PENDING)) {
+    return <Navigate to="/pending" replace />;
+  }
+
+  // If specific roles are required, check them
+  if (requiredRoles && requiredRoles.length > 0) {
+    if (!hasAnyRole(requiredRoles)) {
+      // Redirect to dashboard if user doesn't have required role
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return <>{children}</>;
+}
+
+// Admin-only route component
+export function AdminRoute({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedRoute requiredRoles={[AppRole.ADMIN]} redirectTo="/dashboard">
+      {children}
+    </ProtectedRoute>
+  );
 }

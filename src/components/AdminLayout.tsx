@@ -50,7 +50,7 @@ interface AdminLayoutProps {
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { canViewDashboard, canViewInventory, canViewShipments, isAdmin, isLogistics, isRetailer, signOut, user } = useAuth();
+  const { canViewDashboard, canViewInventory, canViewShipments, isAdmin, isLogistics, isRetailer, isWholesaler, signOut, user } = useAuth();
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -63,6 +63,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   // Get role display name
   const getRoleBadge = () => {
     if (isAdmin) return t('role.admin');
+    if (isWholesaler) return t('role.wholesaler') || 'Wholesaler';
     if (isLogistics) return t('role.logistics');
     if (isRetailer) return t('role.retailer');
     return 'User';
@@ -72,37 +73,37 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const navItems = useMemo(() => {
     const items = [];
     
-    // Dashboard - admins only
+    // Dashboard - everyone with dashboard access
     if (canViewDashboard) {
       items.push({ 
-        to: '/admin', 
+        to: '/dashboard', 
         icon: <LayoutDashboard className="h-5 w-5" />, 
         label: t('nav.dashboard') 
       });
     }
     
-    // Companies - admins only
+    // Companies - admins only (via hidden admin route)
     if (isAdmin) {
       items.push({ 
-        to: '/admin/companies', 
+        to: '/__internal__/admin/companies', 
         icon: <Building2 className="h-5 w-5" />, 
         label: t('nav.companies') 
       });
     }
     
-    // Inventory - admins only
+    // Inventory - admins and wholesalers
     if (canViewInventory) {
       items.push({ 
-        to: '/admin/inventory', 
+        to: '/dashboard/inventory', 
         icon: <Package className="h-5 w-5" />, 
         label: t('nav.inventory') 
       });
     }
     
-    // Shipments - admins, logistics, retailers (with different permissions)
+    // Shipments - admins, wholesalers, logistics, retailers (with different permissions)
     if (canViewShipments) {
       items.push({ 
-        to: '/admin/shipments', 
+        to: '/dashboard/shipments', 
         icon: <Truck className="h-5 w-5" />, 
         label: t('nav.shipments') 
       });

@@ -14,6 +14,8 @@ export const AppRole = {
   USER: 'user',
   LOGISTICS: 'logistics',
   RETAILER: 'retailer',
+  PENDING: 'pending',
+  WHOLESALER: 'wholesaler',
 } as const;
 
 export type AppRole = typeof AppRole[keyof typeof AppRole];
