@@ -110,10 +110,15 @@ const translations: Translations = {
   
   // Roles
   'role.admin': { en: 'Admin', hi: 'एडमिन' },
+  'role.user': { en: 'User', hi: 'उपयोगकर्ता' },
   'role.logistics': { en: 'Logistics', hi: 'लॉजिस्टिक्स' },
   'role.supplier': { en: 'Supplier', hi: 'सप्लायर' },
   'role.wholesaler': { en: 'Wholesaler', hi: 'थोक विक्रेता' },
   'role.retailer': { en: 'Retailer', hi: 'खुदरा विक्रेता' },
+  
+  // Dashboard titles
+  'dashboard.personalDashboard': { en: 'Personal Dashboard', hi: 'व्यक्तिगत डैशबोर्ड' },
+  'dashboard.personalDashboardSubtitle': { en: 'Your overview and activity', hi: 'आपका अवलोकन और गतिविधि' },
   
   // App
   'app.name': { en: 'Qaafi', hi: 'क़ाफ़ी' },

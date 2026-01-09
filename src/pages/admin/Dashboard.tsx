@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 
 const AdminDashboard = () => {
   const { t } = useLanguage();
-  const { canViewDashboard, isLoading } = useAuth();
+  const { canViewDashboard, isLoading, isAdmin } = useAuth();
   const navigate = useNavigate();
   const stats = dashboardService.getStats();
   const companyStats = companyService.getStats();
@@ -45,8 +45,12 @@ const AdminDashboard = () => {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('admin.dashboard')}</h1>
-          <p className="text-muted-foreground">{t('admin.dashboardSubtitle')}</p>
+          <h1 className="text-2xl font-bold text-foreground">
+            {isAdmin ? t('admin.dashboard') : t('dashboard.personalDashboard')}
+          </h1>
+          <p className="text-muted-foreground">
+            {isAdmin ? t('admin.dashboardSubtitle') : t('dashboard.personalDashboardSubtitle')}
+          </p>
         </div>
 
         {/* Company Overview */}

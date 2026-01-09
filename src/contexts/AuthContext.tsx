@@ -137,11 +137,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Permission flags based on requirements:
   // - Admins: Full access to everything
-  // - Wholesalers: Can manage inventory and shipments
-  // - Logistics: Can view and update shipments
-  // - Retailers: Can view shipment status only
-  const canViewInventory = isAdmin || isWholesaler;
-  const canManageInventory = isAdmin || isWholesaler;
+  // - All users: Can view and manage their own inventory
+  const canViewInventory = isAdmin || isWholesaler || isLogistics || isRetailer;
+  const canManageInventory = isAdmin || isWholesaler || isLogistics || isRetailer;
   const canViewDashboard = isAdmin || isWholesaler || isLogistics || isRetailer;
   const canViewSettings = isAdmin;
   const canViewShipments = isAdmin || isWholesaler || isLogistics || isRetailer;
