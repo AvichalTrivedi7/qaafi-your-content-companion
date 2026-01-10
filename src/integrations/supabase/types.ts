@@ -301,6 +301,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_and_assign_company: {
+        Args: {
+          company_name: string
+          company_type: Database["public"]["Enums"]["company_type"]
+        }
+        Returns: string
+      }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {

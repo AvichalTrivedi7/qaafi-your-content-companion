@@ -37,7 +37,7 @@ export class CompanyService {
     const accessCode = this.generateAccessCode();
     const newCompany: Company = {
       ...data,
-      id: `company-${Date.now()}`,
+      id: crypto.randomUUID(),
       accessCode,
       createdAt: new Date(),
       updatedAt: new Date(),
