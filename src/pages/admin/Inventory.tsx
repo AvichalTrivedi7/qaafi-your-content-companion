@@ -51,7 +51,7 @@ import { format } from 'date-fns';
 const AdminInventory = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const { canViewInventory, isLoading } = useAuth();
+  const { canViewInventory, isLoading, profile } = useAuth();
   const navigate = useNavigate();
   const [inventory, setInventory] = useState<InventoryItem[]>(inventoryService.getAllItems());
   const companies = companyService.getAll();
@@ -139,6 +139,18 @@ const AdminInventory = () => {
   const handleAddProduct = () => {
     if (!newProductName.trim() || !newProductSku.trim()) return;
     
+    // Get the user's company ID from AuthContext
+    const userCompanyId = profile?.companyId;
+    
+    if (!userCompanyId) {
+      toast({ 
+        title: 'No company assigned',
+        description: 'Please contact an admin to assign you to a company.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     const newItem: InventoryItem = {
       id: crypto.randomUUID(),
       sku: newProductSku.trim(),
@@ -147,7 +159,7 @@ const AdminInventory = () => {
       availableStock: 0,
       reservedStock: 0,
       lowStockThreshold: parseInt(newProductLowStockThreshold) || 10,
-      companyId: filterCompany !== 'all' ? filterCompany : undefined,
+      companyId: userCompanyId,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
