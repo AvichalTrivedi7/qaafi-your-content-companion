@@ -7,6 +7,7 @@ import { inventoryRepository } from '@/repositories';
 import { InventoryItem } from '@/domain/models';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CompanyOnboarding } from '@/components/CompanyOnboarding';
 import { 
   Package, 
   Plus, 
@@ -51,7 +52,7 @@ import { format } from 'date-fns';
 const AdminInventory = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const { canViewInventory, isLoading, profile } = useAuth();
+  const { canViewInventory, isLoading, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [inventory, setInventory] = useState<InventoryItem[]>(inventoryService.getAllItems());
   const companies = companyService.getAll();
@@ -95,6 +96,15 @@ const AdminInventory = () => {
 
   if (!canViewInventory) {
     return null;
+  }
+
+  // Show company onboarding if user has no company assigned
+  if (!profile?.companyId) {
+    return (
+      <AdminLayout>
+        <CompanyOnboarding onComplete={refreshProfile} />
+      </AdminLayout>
+    );
   }
 
   const getCompanyName = (companyId?: string) => {

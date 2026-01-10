@@ -38,6 +38,7 @@ interface AuthContextType {
   canCreateShipments: boolean;
   // Auth actions
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -155,6 +156,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRolesLoaded(false);
   };
 
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchUserData(user.id);
+    }
+  };
+
   const value: AuthContextType = {
     user,
     session,
@@ -178,6 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     canManageInventory,
     canCreateShipments,
     signOut,
+    refreshProfile,
   };
 
   return (
