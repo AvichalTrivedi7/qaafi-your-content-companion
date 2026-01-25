@@ -78,12 +78,15 @@ export class CompanyService {
     };
   }
 
-  // Generate a unique access code
+  // Generate a unique access code using cryptographically secure random values
   private generateAccessCode(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const randomValues = new Uint8Array(8);
+    crypto.getRandomValues(randomValues);
+    
     let code = '';
     for (let i = 0; i < 8; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
+      code += chars.charAt(randomValues[i] % chars.length);
     }
     return code;
   }
