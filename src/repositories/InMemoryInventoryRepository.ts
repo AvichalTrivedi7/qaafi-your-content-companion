@@ -59,6 +59,13 @@ export class InMemoryInventoryRepository implements IInventoryRepository {
     this.items.splice(index, 1);
     return true;
   }
+
+  softDelete(id: string): boolean {
+    const item = this.findById(id);
+    if (!item) return false;
+    this.update(id, { isDeleted: true });
+    return true;
+  }
 }
 
 // Singleton instance for the application

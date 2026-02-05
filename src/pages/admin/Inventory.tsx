@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { inventoryService } from '@/services/inventoryService';
 import { companyService } from '@/services/companyService';
 import { inventoryRepository } from '@/repositories';
-import { InventoryItem } from '@/domain/models';
+import { InventoryItem, INVENTORY_UNITS, InventoryUnit } from '@/domain/models';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CompanyOnboarding } from '@/components/CompanyOnboarding';
@@ -67,7 +67,7 @@ const AdminInventory = () => {
   const [addProductDialogOpen, setAddProductDialogOpen] = useState(false);
   const [newProductName, setNewProductName] = useState('');
   const [newProductSku, setNewProductSku] = useState('');
-  const [newProductUnit, setNewProductUnit] = useState('pieces');
+  const [newProductUnit, setNewProductUnit] = useState<InventoryUnit>('pieces');
   const [newProductLowStockThreshold, setNewProductLowStockThreshold] = useState('10');
 
   // Redirect if user doesn't have inventory access
@@ -394,7 +394,7 @@ const AdminInventory = () => {
               
               <div className="grid gap-2">
                 <Label>{t('inventory.unit')}</Label>
-                <Select value={newProductUnit} onValueChange={setNewProductUnit}>
+                <Select value={newProductUnit} onValueChange={(v) => setNewProductUnit(v as InventoryUnit)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -402,6 +402,7 @@ const AdminInventory = () => {
                     <SelectItem value="pieces">{t('inventory.pieces')}</SelectItem>
                     <SelectItem value="meters">{t('inventory.meters')}</SelectItem>
                     <SelectItem value="kg">{t('inventory.kg')}</SelectItem>
+                    <SelectItem value="grams">{t('inventory.grams')}</SelectItem>
                     <SelectItem value="liters">{t('inventory.liters')}</SelectItem>
                   </SelectContent>
                 </Select>

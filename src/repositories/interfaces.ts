@@ -39,6 +39,7 @@ export interface IInventoryRepository extends IBaseRepository<InventoryItem> {
     availableStock: number,
     reservedStock: number
   ): InventoryItem | undefined;
+  softDelete(id: string): boolean;
 }
 
 // ============================================================================

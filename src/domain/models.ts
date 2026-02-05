@@ -53,6 +53,10 @@ export interface Company {
   updatedAt: Date;
 }
 
+// Standard inventory units
+export const INVENTORY_UNITS = ['pieces', 'kg', 'grams', 'liters', 'meters'] as const;
+export type InventoryUnit = typeof INVENTORY_UNITS[number];
+
 export interface InventoryItem {
   id: string;
   sku: string;
@@ -60,9 +64,10 @@ export interface InventoryItem {
   description?: string;
   availableStock: number;
   reservedStock: number;
-  unit: string;
+  unit: InventoryUnit;
   lowStockThreshold: number;
   companyId?: string;
+  isDeleted?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

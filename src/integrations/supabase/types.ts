@@ -92,6 +92,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_deleted: boolean
           low_stock_threshold: number
           name: string
           reserved_stock: number
@@ -105,6 +106,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_deleted?: boolean
           low_stock_threshold?: number
           name: string
           reserved_stock?: number
@@ -118,6 +120,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_deleted?: boolean
           low_stock_threshold?: number
           name?: string
           reserved_stock?: number

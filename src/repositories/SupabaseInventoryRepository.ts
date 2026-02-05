@@ -13,9 +13,10 @@ function toDomainModel(row: any): InventoryItem {
     description: row.description || undefined,
     availableStock: row.available_stock,
     reservedStock: row.reserved_stock,
-    unit: row.unit,
+    unit: row.unit as InventoryItem['unit'],
     lowStockThreshold: row.low_stock_threshold,
     companyId: row.company_id,
+    isDeleted: row.is_deleted || false,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
@@ -52,6 +53,7 @@ export class SupabaseInventoryRepository implements IInventoryRepository {
     const { data, error } = await supabase
       .from('inventory_items')
       .select('*')
+      .eq('is_deleted', false)
       .order('created_at', { ascending: false });
     
     if (!error && data) {
@@ -161,6 +163,28 @@ export class SupabaseInventoryRepository implements IInventoryRepository {
         if (error) {
           console.error('Failed to delete inventory item:', error);
           if (backup) this.cache.set(id, backup);
+        }
+      });
+
+    return true;
+  }
+
+  softDelete(id: string): boolean {
+    const existing = this.cache.get(id);
+    if (!existing) return false;
+
+    // Remove from cache (soft deleted items are hidden)
+    this.cache.delete(id);
+
+    // Async persist soft delete
+    supabase
+      .from('inventory_items')
+      .update({ is_deleted: true })
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Failed to soft delete inventory item:', error);
+          if (existing) this.cache.set(id, existing);
         }
       });
 

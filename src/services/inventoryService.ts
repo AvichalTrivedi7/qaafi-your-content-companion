@@ -3,7 +3,7 @@
 // Supports transactional rollback operations
 // Uses repository pattern for data access
 
-import { InventoryItem, InventoryStats, ActivityLog } from '@/domain/models';
+import { InventoryItem, InventoryStats, ActivityLog, ActivityType, InventoryUnit } from '@/domain/models';
 import { 
   IInventoryRepository, 
   IActivityRepository, 
@@ -11,22 +11,38 @@ import {
   activityRepository as defaultActivityRepo 
 } from '@/repositories';
 
+export interface CreateInventoryItemInput {
+  sku: string;
+  name: string;
+  description?: string;
+  unit: InventoryUnit;
+  lowStockThreshold: number;
+  companyId: string;
+}
+
+export interface UpdateInventoryItemInput {
+  name?: string;
+  description?: string;
+  unit?: InventoryUnit;
+  lowStockThreshold?: number;
+}
+
 export class InventoryService {
   constructor(
     private inventoryRepo: IInventoryRepository = defaultInventoryRepo,
     private activityRepo: IActivityRepository = defaultActivityRepo
   ) {}
 
-  // Get all items for a specific company
+  // Get all items for a specific company (excludes deleted)
   getAllItems(companyId?: string): InventoryItem[] {
-    if (!companyId) return this.inventoryRepo.findAll();
-    return this.inventoryRepo.findByCompany(companyId);
+    if (!companyId) return this.inventoryRepo.findAll().filter(i => !i.isDeleted);
+    return this.inventoryRepo.findByCompany(companyId).filter(i => !i.isDeleted);
   }
 
   // Get item by ID, scoped to company
   getItemById(id: string, companyId?: string): InventoryItem | undefined {
     const item = this.inventoryRepo.findById(id);
-    if (!item) return undefined;
+    if (!item || item.isDeleted) return undefined;
     if (companyId && item.companyId !== companyId) return undefined;
     return item;
   }
@@ -34,14 +50,14 @@ export class InventoryService {
   // Get item by SKU, scoped to company
   getItemBySku(sku: string, companyId?: string): InventoryItem | undefined {
     const item = this.inventoryRepo.findBySku(sku);
-    if (!item) return undefined;
+    if (!item || item.isDeleted) return undefined;
     if (companyId && item.companyId !== companyId) return undefined;
     return item;
   }
 
   // Get low stock items for a specific company
   getLowStockItems(companyId?: string): InventoryItem[] {
-    return this.inventoryRepo.findLowStock(companyId);
+    return this.inventoryRepo.findLowStock(companyId).filter(i => !i.isDeleted);
   }
 
   // Get stats for a specific company
@@ -63,6 +79,86 @@ export class InventoryService {
     return item.availableStock <= item.lowStockThreshold;
   }
 
+  // Create a new inventory item
+  createItem(input: CreateInventoryItemInput): InventoryItem {
+    const newItem: InventoryItem = {
+      id: crypto.randomUUID(),
+      sku: input.sku,
+      name: input.name,
+      description: input.description,
+      unit: input.unit,
+      availableStock: 0,
+      reservedStock: 0,
+      lowStockThreshold: input.lowStockThreshold,
+      companyId: input.companyId,
+      isDeleted: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const created = this.inventoryRepo.create(newItem);
+
+    // Log activity
+    this.activityRepo.create({
+      id: crypto.randomUUID(),
+      type: ActivityType.INVENTORY_IN,
+      description: `Created new product: ${input.name}`,
+      referenceId: created.id,
+      referenceType: 'inventory',
+      companyId: input.companyId,
+      metadata: { action: 'create', sku: input.sku },
+      createdAt: new Date(),
+    });
+
+    return created;
+  }
+
+  // Update an inventory item
+  updateItem(id: string, updates: UpdateInventoryItemInput, companyId: string): InventoryItem | null {
+    const item = this.getItemById(id, companyId);
+    if (!item) return null;
+
+    const updated = this.inventoryRepo.update(id, updates);
+    if (!updated) return null;
+
+    // Log activity
+    this.activityRepo.create({
+      id: crypto.randomUUID(),
+      type: ActivityType.INVENTORY_IN,
+      description: `Updated product: ${updated.name}`,
+      referenceId: id,
+      referenceType: 'inventory',
+      companyId,
+      metadata: { action: 'update', changes: updates },
+      createdAt: new Date(),
+    });
+
+    return updated;
+  }
+
+  // Soft delete an inventory item
+  deleteItem(id: string, companyId: string): boolean {
+    const item = this.getItemById(id, companyId);
+    if (!item) return false;
+
+    const success = this.inventoryRepo.softDelete(id);
+    if (!success) return false;
+
+    // Log activity
+    this.activityRepo.create({
+      id: crypto.randomUUID(),
+      type: ActivityType.INVENTORY_OUT,
+      description: `Removed product: ${item.name}`,
+      referenceId: id,
+      referenceType: 'inventory',
+      companyId,
+      metadata: { action: 'delete', sku: item.sku },
+      createdAt: new Date(),
+    });
+
+    return true;
+  }
+
   // Stock in for a specific company's item
   stockIn(itemId: string, quantity: number, companyId?: string): InventoryItem | null {
     const item = this.getItemById(itemId, companyId);
@@ -71,6 +167,19 @@ export class InventoryService {
     const updated = this.inventoryRepo.update(itemId, {
       availableStock: item.availableStock + quantity,
     });
+
+    if (updated && companyId) {
+      this.activityRepo.create({
+        id: crypto.randomUUID(),
+        type: ActivityType.INVENTORY_IN,
+        description: `Stock in: +${quantity} ${item.unit} of ${item.name}`,
+        referenceId: itemId,
+        referenceType: 'inventory',
+        companyId,
+        metadata: { quantity, action: 'stock_in' },
+        createdAt: new Date(),
+      });
+    }
 
     return updated || null;
   }
@@ -84,6 +193,19 @@ export class InventoryService {
     const updated = this.inventoryRepo.update(itemId, {
       availableStock: item.availableStock - quantity,
     });
+
+    if (updated && companyId) {
+      this.activityRepo.create({
+        id: crypto.randomUUID(),
+        type: ActivityType.INVENTORY_OUT,
+        description: `Stock out: -${quantity} ${item.unit} of ${item.name}`,
+        referenceId: itemId,
+        referenceType: 'inventory',
+        companyId,
+        metadata: { quantity, action: 'stock_out' },
+        createdAt: new Date(),
+      });
+    }
 
     return updated || null;
   }

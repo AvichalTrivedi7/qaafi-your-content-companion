@@ -64,7 +64,14 @@ const translations: Translations = {
   'inventory.productAdded': { en: 'Product added successfully', hi: 'उत्पाद सफलतापूर्वक जोड़ा गया' },
   'inventory.addProductDescription': { en: 'Add a new product to your inventory', hi: 'अपनी इन्वेंटरी में नया उत्पाद जोड़ें' },
   'inventory.kg': { en: 'Kilograms', hi: 'किलोग्राम' },
+  'inventory.grams': { en: 'Grams', hi: 'ग्राम' },
   'inventory.liters': { en: 'Liters', hi: 'लीटर' },
+  'inventory.productUpdated': { en: 'Product updated successfully', hi: 'उत्पाद सफलतापूर्वक अपडेट किया गया' },
+  'inventory.productDeleted': { en: 'Product removed successfully', hi: 'उत्पाद सफलतापूर्वक हटाया गया' },
+  'inventory.fillAllFields': { en: 'Please fill all required fields', hi: 'कृपया सभी आवश्यक फ़ील्ड भरें' },
+  'inventory.skuExists': { en: 'SKU already exists', hi: 'SKU पहले से मौजूद है' },
+  'inventory.insufficientStock': { en: 'Insufficient stock available', hi: 'अपर्याप्त स्टॉक उपलब्ध' },
+  'inventory.deleteConfirmMessage': { en: 'Are you sure you want to remove this product?', hi: 'क्या आप वाकई इस उत्पाद को हटाना चाहते हैं?' },
   
   // Shipments
   'shipments.title': { en: 'Shipments', hi: 'शिपमेंट' },
@@ -115,6 +122,7 @@ const translations: Translations = {
   'common.items': { en: 'items', hi: 'आइटम' },
   'common.add': { en: 'Add', hi: 'जोड़ें' },
   'common.close': { en: 'Close', hi: 'बंद करें' },
+  'common.confirmDelete': { en: 'Confirm Delete', hi: 'हटाने की पुष्टि करें' },
   
   // Roles
   'role.admin': { en: 'Admin', hi: 'एडमिन' },
