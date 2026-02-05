@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   Truck,
   Plus,
@@ -14,6 +14,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,11 +50,14 @@ const statusConfig: Record<ShipmentStatus, { icon: typeof Truck; color: string; 
 
 const Shipments = () => {
   const { t } = useLanguage();
+  const { profile } = useAuth();
+  const companyId = profile?.companyId ?? undefined;
   
   // Use services for data - trigger re-render with state
   const [refreshKey, setRefreshKey] = useState(0);
-  const shipments = shipmentService.getAllShipments();
-  const inventoryItems = inventoryService.getAllItems();
+  const shipments = useMemo(() => shipmentService.getAllShipments(companyId), [companyId, refreshKey]);
+  // Only show non-deleted inventory items for the user's company
+  const inventoryItems = useMemo(() => inventoryService.getAllItems(companyId), [companyId, refreshKey]);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<ShipmentStatus | 'all'>('all');
