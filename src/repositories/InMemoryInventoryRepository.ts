@@ -8,19 +8,22 @@ export class InMemoryInventoryRepository implements IInventoryRepository {
   private items: InventoryItem[] = [...mockInventoryItems];
 
   findAll(): InventoryItem[] {
-    return [...this.items];
+    return this.items.filter(item => !item.isDeleted);
   }
 
   findById(id: string): InventoryItem | undefined {
-    return this.items.find(item => item.id === id);
+    const item = this.items.find(item => item.id === id);
+    if (item?.isDeleted) return undefined;
+    return item;
   }
 
   findBySku(sku: string): InventoryItem | undefined {
-    return this.items.find(item => item.sku === sku);
+    const item = this.items.find(item => item.sku === sku && !item.isDeleted);
+    return item;
   }
 
   findByCompany(companyId: string): InventoryItem[] {
-    return this.items.filter(item => item.companyId === companyId);
+    return this.items.filter(item => item.companyId === companyId && !item.isDeleted);
   }
 
   findLowStock(companyId?: string): InventoryItem[] {

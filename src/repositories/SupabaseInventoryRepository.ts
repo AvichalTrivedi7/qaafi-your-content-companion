@@ -42,11 +42,12 @@ export class SupabaseInventoryRepository implements IInventoryRepository {
   private allLoaded = false;
 
   findAll(): InventoryItem[] {
-    // Synchronous - return cached data, trigger async refresh
+    // Synchronous - return cached data (already filtered for is_deleted=false), trigger async refresh
     if (!this.allLoaded) {
       this.loadAll();
     }
-    return Array.from(this.cache.values());
+    // Additional filter in case of stale cache
+    return Array.from(this.cache.values()).filter(item => !item.isDeleted);
   }
 
   private async loadAll(): Promise<void> {
@@ -67,19 +68,22 @@ export class SupabaseInventoryRepository implements IInventoryRepository {
   }
 
   findById(id: string): InventoryItem | undefined {
-    return this.cache.get(id);
+    const item = this.cache.get(id);
+    // Double-check is_deleted in case cache is stale
+    if (item?.isDeleted) return undefined;
+    return item;
   }
 
   findBySku(sku: string): InventoryItem | undefined {
-    return Array.from(this.cache.values()).find(item => item.sku === sku);
+    return Array.from(this.cache.values()).find(item => item.sku === sku && !item.isDeleted);
   }
 
   findByCompany(companyId: string): InventoryItem[] {
-    return Array.from(this.cache.values()).filter(item => item.companyId === companyId);
+    return Array.from(this.cache.values()).filter(item => item.companyId === companyId && !item.isDeleted);
   }
 
   findLowStock(companyId?: string): InventoryItem[] {
-    let items = Array.from(this.cache.values());
+    let items = Array.from(this.cache.values()).filter(item => !item.isDeleted);
     if (companyId) {
       items = items.filter(item => item.companyId === companyId);
     }
