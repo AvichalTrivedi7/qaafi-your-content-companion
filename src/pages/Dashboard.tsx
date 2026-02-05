@@ -9,6 +9,7 @@ import {
   ArrowDownCircle
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/AppLayout';
 import { StatCard } from '@/components/StatCard';
 import { ActivityItem } from '@/components/ActivityItem';
@@ -19,8 +20,12 @@ import { dashboardService, shipmentService } from '@/services';
 
 const Dashboard = () => {
   const { t } = useLanguage();
-  const stats = dashboardService.getStats();
-  const activeShipments = [...shipmentService.getShipmentsByStatus('pending'), ...shipmentService.getShipmentsByStatus('in_transit')].slice(0, 3);
+  const { profile } = useAuth();
+  
+  // Scope all stats to the user's company
+  const companyId = profile?.companyId ?? undefined;
+  const stats = dashboardService.getStats(companyId);
+  const activeShipments = [...shipmentService.getShipmentsByStatus('pending', companyId), ...shipmentService.getShipmentsByStatus('in_transit', companyId)].slice(0, 3);
 
   return (
     <AppLayout>
