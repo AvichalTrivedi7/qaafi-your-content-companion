@@ -53,33 +53,35 @@ const AdminDashboard = () => {
           </p>
         </div>
 
-        {/* Company Overview */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <StatCard
-            title={t('admin.totalCompanies')}
-            value={companyStats.totalCompanies}
-            subtitle={`${companyStats.activeCount} ${t('admin.active')}`}
-            icon={Building2}
-          />
-          <StatCard
-            title={t('admin.suppliers')}
-            value={companyStats.supplierCount}
-            icon={Building2}
-            variant="info"
-          />
-          <StatCard
-            title={t('admin.wholesalers')}
-            value={companyStats.wholesalerCount}
-            icon={Building2}
-            variant="success"
-          />
-          <StatCard
-            title={t('admin.retailers')}
-            value={companyStats.retailerCount}
-            icon={Building2}
-            variant="warning"
-          />
-        </div>
+        {/* Company Overview - Admin only */}
+        {isAdmin && (
+          <div className="grid gap-4 md:grid-cols-4">
+            <StatCard
+              title={t('admin.totalCompanies')}
+              value={companyStats.totalCompanies}
+              subtitle={`${companyStats.activeCount} ${t('admin.active')}`}
+              icon={Building2}
+            />
+            <StatCard
+              title={t('admin.suppliers')}
+              value={companyStats.supplierCount}
+              icon={Building2}
+              variant="info"
+            />
+            <StatCard
+              title={t('admin.wholesalers')}
+              value={companyStats.wholesalerCount}
+              icon={Building2}
+              variant="success"
+            />
+            <StatCard
+              title={t('admin.retailers')}
+              value={companyStats.retailerCount}
+              icon={Building2}
+              variant="warning"
+            />
+          </div>
+        )}
 
         {/* Inventory & Shipment Stats */}
         <div className="grid gap-4 md:grid-cols-4">
