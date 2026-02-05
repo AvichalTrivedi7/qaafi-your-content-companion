@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Package, 
   Plus, 
@@ -6,27 +6,43 @@ import {
   ArrowUpCircle, 
   ArrowDownCircle,
   MoreHorizontal,
-  History
+  History,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/AppLayout';
+import { CompanyOnboarding } from '@/components/CompanyOnboarding';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Table,
   TableBody,
@@ -45,123 +61,124 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { ActivityType } from '@/domain/models';
-
-// Local inventory activity type (subset of global ActivityType)
-type InventoryActivityType = typeof ActivityType.INVENTORY_IN | typeof ActivityType.INVENTORY_OUT;
-
-interface Product {
-  id: string;
-  name: string;
-  unit: 'meters' | 'pieces';
-  available: number;
-  reserved: number;
-  lastUpdated: Date;
-  activityLog: LocalActivityLog[];
-}
-
-interface LocalActivityLog {
-  id: string;
-  type: InventoryActivityType;
-  quantity: number;
-  user: string;
-  timestamp: Date;
-  notes?: string;
-}
-
-// Mock data
-const initialProducts: Product[] = [
-  {
-    id: '1',
-    name: 'Cotton Fabric - Blue',
-    unit: 'meters',
-    available: 1500,
-    reserved: 200,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 15),
-    activityLog: [
-      { id: '1', type: ActivityType.INVENTORY_IN, quantity: 500, user: 'Rajesh Kumar', timestamp: new Date(Date.now() - 1000 * 60 * 15) },
-      { id: '2', type: ActivityType.INVENTORY_OUT, quantity: 150, user: 'Amit Singh', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Silk Material - Red',
-    unit: 'pieces',
-    available: 45,
-    reserved: 30,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 120),
-    activityLog: [
-      { id: '3', type: ActivityType.INVENTORY_OUT, quantity: 200, user: 'Priya Sharma', timestamp: new Date(Date.now() - 1000 * 60 * 120) },
-    ],
-  },
-  {
-    id: '3',
-    name: 'Cotton Fabric - White',
-    unit: 'meters',
-    available: 120,
-    reserved: 50,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 5),
-    activityLog: [],
-  },
-  {
-    id: '4',
-    name: 'Polyester Blend',
-    unit: 'meters',
-    available: 30,
-    reserved: 0,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    activityLog: [],
-  },
-  {
-    id: '5',
-    name: 'Wool Fabric - Grey',
-    unit: 'meters',
-    available: 850,
-    reserved: 100,
-    lastUpdated: new Date(Date.now() - 1000 * 60 * 60 * 3),
-    activityLog: [],
-  },
-];
+import { InventoryItem, ActivityType, INVENTORY_UNITS, InventoryUnit } from '@/domain/models';
+import { inventoryService } from '@/services/inventoryService';
+import { activityService } from '@/services/activityService';
 
 const Inventory = () => {
   const { t } = useLanguage();
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const { profile, refreshProfile } = useAuth();
+  const companyId = profile?.companyId ?? undefined;
+  
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isStockActionOpen, setIsStockActionOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<InventoryItem | null>(null);
   const [stockActionType, setStockActionType] = useState<'in' | 'out'>('in');
   const [isActivityLogOpen, setIsActivityLogOpen] = useState(false);
+  const [isEditProductOpen, setIsEditProductOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   // New product form state
   const [newProductName, setNewProductName] = useState('');
-  const [newProductUnit, setNewProductUnit] = useState<'meters' | 'pieces'>('pieces');
+  const [newProductSku, setNewProductSku] = useState('');
+  const [newProductUnit, setNewProductUnit] = useState<InventoryUnit>('pieces');
+  const [newProductLowStockThreshold, setNewProductLowStockThreshold] = useState('10');
+
+  // Edit product form state
+  const [editProductName, setEditProductName] = useState('');
+  const [editProductUnit, setEditProductUnit] = useState<InventoryUnit>('pieces');
+  const [editProductLowStockThreshold, setEditProductLowStockThreshold] = useState('10');
 
   // Stock action form state
   const [stockQuantity, setStockQuantity] = useState('');
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase())
+  // Load inventory on mount and when company changes
+  useEffect(() => {
+    if (companyId) {
+      setInventory(inventoryService.getAllItems(companyId));
+    }
+  }, [companyId]);
+
+  // Show onboarding if no company
+  if (!companyId) {
+    return (
+      <AppLayout>
+        <CompanyOnboarding onComplete={refreshProfile} />
+      </AppLayout>
+    );
+  }
+
+  const filteredProducts = inventory.filter((product) =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.sku.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleAddProduct = () => {
-    if (!newProductName.trim()) return;
+    if (!newProductName.trim() || !newProductSku.trim()) {
+      toast.error(t('inventory.fillAllFields'));
+      return;
+    }
 
-    const newProduct: Product = {
-      id: Date.now().toString(),
-      name: newProductName,
+    // Check for duplicate SKU
+    const existingSku = inventoryService.getItemBySku(newProductSku.trim(), companyId);
+    if (existingSku) {
+      toast.error(t('inventory.skuExists'));
+      return;
+    }
+
+    const created = inventoryService.createItem({
+      name: newProductName.trim(),
+      sku: newProductSku.trim(),
       unit: newProductUnit,
-      available: 0,
-      reserved: 0,
-      lastUpdated: new Date(),
-      activityLog: [],
-    };
+      lowStockThreshold: parseInt(newProductLowStockThreshold) || 10,
+      companyId,
+    });
 
-    setProducts([...products, newProduct]);
+    setInventory(inventoryService.getAllItems(companyId));
     setNewProductName('');
+    setNewProductSku('');
     setNewProductUnit('pieces');
+    setNewProductLowStockThreshold('10');
     setIsAddProductOpen(false);
-    toast.success(t('inventory.addProduct') + ' ✓');
+    toast.success(t('inventory.productAdded'));
+  };
+
+  const handleEditProduct = () => {
+    if (!selectedProduct || !editProductName.trim()) return;
+
+    const updated = inventoryService.updateItem(
+      selectedProduct.id,
+      {
+        name: editProductName.trim(),
+        unit: editProductUnit,
+        lowStockThreshold: parseInt(editProductLowStockThreshold) || 10,
+      },
+      companyId
+    );
+
+    if (updated) {
+      setInventory(inventoryService.getAllItems(companyId));
+      toast.success(t('inventory.productUpdated'));
+    }
+
+    setIsEditProductOpen(false);
+    setSelectedProduct(null);
+  };
+
+  const handleDeleteProduct = () => {
+    if (!selectedProduct) return;
+
+    const success = inventoryService.deleteItem(selectedProduct.id, companyId);
+
+    if (success) {
+      setInventory(inventoryService.getAllItems(companyId));
+      toast.success(t('inventory.productDeleted'));
+    }
+
+    setIsDeleteConfirmOpen(false);
+    setSelectedProduct(null);
   };
 
   const handleStockAction = () => {
@@ -170,53 +187,62 @@ const Inventory = () => {
     const qty = parseInt(stockQuantity);
     if (isNaN(qty) || qty <= 0) return;
 
-    setProducts(products.map((p) => {
-      if (p.id === selectedProduct.id) {
-        const newAvailable = stockActionType === 'in' 
-          ? p.available + qty 
-          : Math.max(0, p.available - qty);
-        
-        const newLog: LocalActivityLog = {
-          id: Date.now().toString(),
-          type: stockActionType === 'in' ? ActivityType.INVENTORY_IN : ActivityType.INVENTORY_OUT,
-          quantity: qty,
-          user: 'Current User',
-          timestamp: new Date(),
-        };
+    let result: InventoryItem | null = null;
 
-        return {
-          ...p,
-          available: newAvailable,
-          lastUpdated: new Date(),
-          activityLog: [newLog, ...p.activityLog],
-        };
+    if (stockActionType === 'in') {
+      result = inventoryService.stockIn(selectedProduct.id, qty, companyId);
+    } else {
+      if (selectedProduct.availableStock < qty) {
+        toast.error(t('inventory.insufficientStock'));
+        return;
       }
-      return p;
-    }));
+      result = inventoryService.stockOut(selectedProduct.id, qty, companyId);
+    }
+
+    if (result) {
+      setInventory(inventoryService.getAllItems(companyId));
+      toast.success(
+        stockActionType === 'in' 
+          ? `+${qty} ${selectedProduct.unit} ${t('inventory.stockIn')}`
+          : `-${qty} ${selectedProduct.unit} ${t('inventory.stockOut')}`
+      );
+    }
 
     setStockQuantity('');
     setIsStockActionOpen(false);
-    toast.success(
-      stockActionType === 'in' 
-        ? `+${qty} ${selectedProduct.unit} ${t('inventory.stockIn')}`
-        : `-${qty} ${selectedProduct.unit} ${t('inventory.stockOut')}`
-    );
   };
 
-  const openStockAction = (product: Product, type: 'in' | 'out') => {
+  const openStockAction = (product: InventoryItem, type: 'in' | 'out') => {
     setSelectedProduct(product);
     setStockActionType(type);
     setIsStockActionOpen(true);
   };
 
-  const openActivityLog = (product: Product) => {
+  const openActivityLog = (product: InventoryItem) => {
     setSelectedProduct(product);
     setIsActivityLogOpen(true);
   };
 
-  const isLowStock = (product: Product) => {
-    const threshold = product.unit === 'meters' ? 200 : 100;
-    return product.available < threshold;
+  const openEditProduct = (product: InventoryItem) => {
+    setSelectedProduct(product);
+    setEditProductName(product.name);
+    setEditProductUnit(product.unit);
+    setEditProductLowStockThreshold(product.lowStockThreshold.toString());
+    setIsEditProductOpen(true);
+  };
+
+  const openDeleteConfirm = (product: InventoryItem) => {
+    setSelectedProduct(product);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const isLowStock = (product: InventoryItem) => {
+    return product.availableStock <= product.lowStockThreshold;
+  };
+
+  const getActivityLogs = () => {
+    if (!selectedProduct) return [];
+    return inventoryService.getActivityLogs(companyId, selectedProduct.id);
   };
 
   return (
@@ -225,7 +251,7 @@ const Inventory = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t('inventory.title')}</h1>
-          <p className="text-muted-foreground">{products.length} {t('dashboard.products')}</p>
+          <p className="text-muted-foreground">{inventory.length} {t('dashboard.products')}</p>
         </div>
         <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
           <DialogTrigger asChild>
@@ -248,16 +274,35 @@ const Inventory = () => {
                 />
               </div>
               <div className="space-y-2">
+                <Label>{t('inventory.sku')}</Label>
+                <Input
+                  placeholder={t('inventory.enterSku')}
+                  value={newProductSku}
+                  onChange={(e) => setNewProductSku(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label>{t('inventory.unit')}</Label>
-                <Select value={newProductUnit} onValueChange={(v) => setNewProductUnit(v as 'meters' | 'pieces')}>
+                <Select value={newProductUnit} onValueChange={(v) => setNewProductUnit(v as InventoryUnit)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="meters">{t('inventory.meters')}</SelectItem>
-                    <SelectItem value="pieces">{t('inventory.pieces')}</SelectItem>
+                    {INVENTORY_UNITS.map(unit => (
+                      <SelectItem key={unit} value={unit}>{t(`inventory.${unit}`)}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('inventory.lowStockThreshold')}</Label>
+                <Input
+                  type="number"
+                  placeholder="10"
+                  value={newProductLowStockThreshold}
+                  onChange={(e) => setNewProductLowStockThreshold(e.target.value)}
+                  min="1"
+                />
               </div>
               <div className="flex gap-2 pt-4">
                 <Button variant="outline" onClick={() => setIsAddProductOpen(false)} className="flex-1">
@@ -291,6 +336,7 @@ const Inventory = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('inventory.productName')}</TableHead>
+                  <TableHead>{t('inventory.sku')}</TableHead>
                   <TableHead className="text-center">{t('inventory.unit')}</TableHead>
                   <TableHead className="text-right">{t('inventory.available')}</TableHead>
                   <TableHead className="text-right">{t('inventory.reserved')}</TableHead>
@@ -299,72 +345,95 @@ const Inventory = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.id} className="animate-fade-in">
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <Package className="h-4 w-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">{product.name}</p>
-                          {isLowStock(product) && (
-                            <Badge variant="outline" className="mt-1 bg-warning/10 text-warning border-warning/20 text-xs">
-                              {t('inventory.lowStock')}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary">
-                        {t(`inventory.${product.unit}`)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {product.available.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {product.reserved.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {product.lastUpdated.toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openStockAction(product, 'in')}
-                          className="h-8 w-8 text-success hover:bg-success/10"
-                        >
-                          <ArrowUpCircle className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openStockAction(product, 'out')}
-                          className="h-8 w-8 text-warning hover:bg-warning/10"
-                        >
-                          <ArrowDownCircle className="h-4 w-4" />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openActivityLog(product)}>
-                              <History className="h-4 w-4 mr-2" />
-                              {t('inventory.activityLog')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                {filteredProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      {t('common.noData')}
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredProducts.map((product) => (
+                    <TableRow key={product.id} className="animate-fade-in">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <Package className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">{product.name}</p>
+                            {isLowStock(product) && (
+                              <Badge variant="outline" className="mt-1 bg-warning/10 text-warning border-warning/20 text-xs">
+                                {t('inventory.lowStock')}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground font-mono text-sm">
+                        {product.sku}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary">
+                          {t(`inventory.${product.unit}`)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {product.availableStock.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {product.reservedStock.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-center text-sm text-muted-foreground">
+                        {product.updatedAt.toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openStockAction(product, 'in')}
+                            className="h-8 w-8 text-success hover:bg-success/10"
+                          >
+                            <ArrowUpCircle className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openStockAction(product, 'out')}
+                            className="h-8 w-8 text-warning hover:bg-warning/10"
+                          >
+                            <ArrowDownCircle className="h-4 w-4" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openEditProduct(product)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                {t('common.edit')}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openActivityLog(product)}>
+                                <History className="h-4 w-4 mr-2" />
+                                {t('inventory.activityLog')}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => openDeleteConfirm(product)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {t('common.delete')}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
@@ -388,7 +457,7 @@ const Inventory = () => {
             <div className="p-3 rounded-lg bg-muted">
               <p className="font-medium">{selectedProduct?.name}</p>
               <p className="text-sm text-muted-foreground">
-                {t('inventory.available')}: {selectedProduct?.available} {selectedProduct?.unit}
+                {t('inventory.available')}: {selectedProduct?.availableStock} {selectedProduct?.unit}
               </p>
             </div>
             <div className="space-y-2">
@@ -420,19 +489,90 @@ const Inventory = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Product Dialog */}
+      <Dialog open={isEditProductOpen} onOpenChange={setIsEditProductOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('common.edit')}: {selectedProduct?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label>{t('inventory.productName')}</Label>
+              <Input
+                placeholder={t('inventory.productName')}
+                value={editProductName}
+                onChange={(e) => setEditProductName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('inventory.unit')}</Label>
+              <Select value={editProductUnit} onValueChange={(v) => setEditProductUnit(v as InventoryUnit)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {INVENTORY_UNITS.map(unit => (
+                    <SelectItem key={unit} value={unit}>{t(`inventory.${unit}`)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('inventory.lowStockThreshold')}</Label>
+              <Input
+                type="number"
+                placeholder="10"
+                value={editProductLowStockThreshold}
+                onChange={(e) => setEditProductLowStockThreshold(e.target.value)}
+                min="1"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditProductOpen(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button onClick={handleEditProduct}>
+                {t('common.save')}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('common.confirmDelete')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('inventory.deleteConfirmMessage')} "{selectedProduct?.name}"?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteProduct}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Activity Log Dialog */}
       <Dialog open={isActivityLogOpen} onOpenChange={setIsActivityLogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('inventory.activityLog')}</DialogTitle>
+            <DialogTitle>{t('inventory.activityLog')}: {selectedProduct?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 pt-4 max-h-96 overflow-y-auto">
-            {selectedProduct?.activityLog.length === 0 ? (
+            {getActivityLogs().length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
                 {t('common.noData')}
               </p>
             ) : (
-              selectedProduct?.activityLog.map((log) => (
+              getActivityLogs().map((log) => (
                 <div key={log.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted">
                   <div className={cn(
                     "p-2 rounded-lg",
@@ -445,11 +585,9 @@ const Inventory = () => {
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-sm">
-                      {log.type === ActivityType.INVENTORY_IN ? '+' : '-'}{log.quantity} {selectedProduct.unit}
-                    </p>
+                    <p className="font-medium text-sm">{log.description}</p>
                     <p className="text-xs text-muted-foreground">
-                      {log.user} • {log.timestamp.toLocaleString()}
+                      {log.createdAt.toLocaleString()}
                     </p>
                   </div>
                 </div>
