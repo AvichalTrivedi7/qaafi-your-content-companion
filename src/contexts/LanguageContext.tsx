@@ -109,6 +109,16 @@ const translations: Translations = {
   'shipments.availableLabel': { en: 'available', hi: 'उपलब्ध' },
   'shipments.myShipments': { en: 'My Shipments', hi: 'मेरे शिपमेंट' },
   'shipments.trackingHistory': { en: 'Tracking History', hi: 'ट्रैकिंग इतिहास' },
+  'shipments.searchOrCreateProduct': { en: 'Search or create product...', hi: 'प्रोडक्ट खोजें या बनाएं...' },
+  'shipments.createProduct': { en: 'Create new product', hi: 'नया प्रोडक्ट बनाएं' },
+  'shipments.newProductNote': { en: 'A new inventory item will be created with initial stock equal to the shipment quantity.', hi: 'शिपमेंट मात्रा के बराबर प्रारंभिक स्टॉक के साथ एक नया इन्वेंटरी आइटम बनाया जाएगा।' },
+  'shipments.productCreated': { en: 'Product created successfully', hi: 'प्रोडक्ट सफलतापूर्वक बनाया गया' },
+  'shipments.productExists': { en: 'A product with this name already exists', hi: 'इस नाम का प्रोडक्ट पहले से मौजूद है' },
+  'inventory.units.pieces': { en: 'Pieces', hi: 'पीस' },
+  'inventory.units.kg': { en: 'Kilograms', hi: 'किलोग्राम' },
+  'inventory.units.grams': { en: 'Grams', hi: 'ग्राम' },
+  'inventory.units.liters': { en: 'Liters', hi: 'लीटर' },
+  'inventory.units.meters': { en: 'Meters', hi: 'मीटर' },
   
   // Common
   'common.save': { en: 'Save', hi: 'सेव करें' },

@@ -17,6 +17,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/AppLayout';
 import { CompanyOnboarding } from '@/components/CompanyOnboarding';
+import { ProductSelector, DEFAULT_LOW_STOCK_THRESHOLD } from '@/components/ProductSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -28,18 +29,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Shipment, ShipmentStatus, ShipmentItem } from '@/domain/models';
+import { Shipment, ShipmentStatus, ShipmentItem, InventoryItem, InventoryUnit } from '@/domain/models';
 import { shipmentService, inventoryService } from '@/services';
 
 const statusConfig: Record<ShipmentStatus, { icon: typeof Truck; color: string; bgColor: string; label: string }> = {
@@ -69,13 +63,20 @@ const Shipments = () => {
   // Create shipment form state
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newDestination, setNewDestination] = useState('');
-  const [selectedItemId, setSelectedItemId] = useState('');
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [itemQuantity, setItemQuantity] = useState('');
   const [shipmentItems, setShipmentItems] = useState<ShipmentItem[]>([]);
+  // Track newly created items that haven't been added to shipment yet
+  const [pendingNewItems, setPendingNewItems] = useState<InventoryItem[]>([]);
 
   const refreshData = useCallback(() => {
     setRefreshKey(prev => prev + 1);
   }, []);
+
+  // Combine existing inventory with pending new items for the selector
+  const availableInventoryItems = useMemo(() => {
+    return [...inventoryItems, ...pendingNewItems];
+  }, [inventoryItems, pendingNewItems]);
 
   // Show onboarding if no company
   if (!companyId) {
@@ -95,34 +96,95 @@ const Shipments = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleAddItem = () => {
-    if (!selectedItemId || !itemQuantity) return;
+  // Generate auto SKU for new products
+  const generateSku = (name: string): string => {
+    const prefix = name.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
+    const timestamp = Date.now().toString(36).toUpperCase();
+    return `${prefix}-${timestamp}`;
+  };
 
-    const inventoryItem = inventoryItems.find((item) => item.id === selectedItemId);
-    if (!inventoryItem) return;
+  // Handle creating a new inventory item on-the-fly
+  const handleCreateNewProduct = (name: string, unit: InventoryUnit): InventoryItem | null => {
+    // Check for duplicate (case-insensitive) in existing inventory
+    const existingItem = inventoryItems.find(
+      (item) => item.name.toLowerCase() === name.toLowerCase()
+    );
+    if (existingItem) {
+      toast.error(t('shipments.productExists'));
+      return null;
+    }
+
+    // Also check pending items
+    const pendingItem = pendingNewItems.find(
+      (item) => item.name.toLowerCase() === name.toLowerCase()
+    );
+    if (pendingItem) {
+      toast.error(t('shipments.productExists'));
+      return null;
+    }
+
+    // Create the new inventory item
+    const newItem = inventoryService.createItem({
+      sku: generateSku(name),
+      name,
+      unit,
+      lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
+      companyId,
+    });
+
+    // Track it as pending (will be added to shipment)
+    setPendingNewItems((prev) => [...prev, newItem]);
+    toast.success(t('shipments.productCreated'));
+    refreshData();
+    
+    return newItem;
+  };
+
+  const handleAddItem = () => {
+    if (!selectedItem || !itemQuantity) return;
 
     const qty = parseInt(itemQuantity);
     if (isNaN(qty) || qty <= 0) return;
 
-    // Check if item already added
-    const existingIndex = shipmentItems.findIndex(item => item.inventoryItemId === selectedItemId);
+    // For existing items, validate stock availability
+    const isPendingNew = pendingNewItems.some((p) => p.id === selectedItem.id);
+    if (!isPendingNew && selectedItem.availableStock < qty) {
+      toast.error(`${t('error.insufficientStock')}: ${selectedItem.name} (${selectedItem.availableStock} ${selectedItem.unit} ${t('shipments.availableLabel')})`);
+      return;
+    }
+
+    // Check if item already added to shipment
+    const existingIndex = shipmentItems.findIndex(item => item.inventoryItemId === selectedItem.id);
     if (existingIndex >= 0) {
-      // Update quantity
+      // Update quantity - but validate total doesn't exceed available
+      const newTotal = shipmentItems[existingIndex].quantity + qty;
+      if (!isPendingNew && selectedItem.availableStock < newTotal) {
+        toast.error(`${t('error.insufficientStock')}: ${selectedItem.name}`);
+        return;
+      }
       const updated = [...shipmentItems];
-      updated[existingIndex].quantity += qty;
+      updated[existingIndex].quantity = newTotal;
       setShipmentItems(updated);
     } else {
       setShipmentItems([
         ...shipmentItems,
         {
-          inventoryItemId: inventoryItem.id,
-          inventoryItemName: inventoryItem.name,
+          inventoryItemId: selectedItem.id,
+          inventoryItemName: selectedItem.name,
           quantity: qty,
         },
       ]);
     }
+
+    // If this was a pending new item, stock in the quantity
+    if (isPendingNew) {
+      inventoryService.stockIn(selectedItem.id, qty, companyId);
+      // Remove from pending since it's now been added
+      setPendingNewItems((prev) => prev.filter((p) => p.id !== selectedItem.id));
+      refreshData();
+    }
     
-    setSelectedItemId('');
+    setSelectedItem(null);
     setItemQuantity('');
   };
 
@@ -183,8 +245,9 @@ const Shipments = () => {
     setNewCustomerName('');
     setNewDestination('');
     setShipmentItems([]);
-    setSelectedItemId('');
+    setSelectedItem(null);
     setItemQuantity('');
+    setPendingNewItems([]);
   };
 
   return (
@@ -231,18 +294,14 @@ const Shipments = () => {
               <div className="space-y-2">
                 <Label>{t('shipments.items')}</Label>
                 <div className="flex gap-2">
-                  <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder={t('shipments.selectProduct')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {inventoryItems.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.name} ({item.availableStock} {item.unit} {t('shipments.availableLabel')})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex-1">
+                    <ProductSelector
+                      inventoryItems={availableInventoryItems}
+                      selectedItemId={selectedItem?.id || ''}
+                      onSelect={setSelectedItem}
+                      onCreateNew={handleCreateNewProduct}
+                    />
+                  </div>
                   <Input
                     type="number"
                     placeholder={t('shipments.qty')}
@@ -251,7 +310,7 @@ const Shipments = () => {
                     className="w-24"
                     min="1"
                   />
-                  <Button variant="secondary" onClick={handleAddItem}>
+                  <Button variant="secondary" onClick={handleAddItem} disabled={!selectedItem}>
                     {t('common.add')}
                   </Button>
                 </div>
@@ -260,7 +319,7 @@ const Shipments = () => {
               {shipmentItems.length > 0 && (
                 <div className="space-y-2">
                   {shipmentItems.map((item, index) => {
-                    const invItem = inventoryItems.find(i => i.id === item.inventoryItemId);
+                    const invItem = availableInventoryItems.find(i => i.id === item.inventoryItemId);
                     return (
                       <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-muted">
                         <span className="text-sm">{item.inventoryItemName}</span>
