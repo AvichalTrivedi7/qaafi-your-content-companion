@@ -15,9 +15,14 @@ import NotFound from "./pages/NotFound";
 
 // Dashboard (role-based single dashboard)
 import AdminDashboard from "./pages/admin/Dashboard";
-import AdminCompanies from "./pages/admin/Companies";
 import AdminInventory from "./pages/admin/Inventory";
 import AdminShipments from "./pages/admin/Shipments";
+
+// Admin-only pages (hidden routes)
+import AdminSystemDashboard from "./pages/admin/SystemDashboard";
+import AdminCompaniesView from "./pages/admin/CompaniesView";
+import AdminUsers from "./pages/admin/Users";
+import AdminActivityLog from "./pages/admin/ActivityLog";
 
 const queryClient = new QueryClient();
 
@@ -39,11 +44,11 @@ const App = () => (
                 <Route path="/dashboard/inventory" element={<ProtectedRoute><AdminInventory /></ProtectedRoute>} />
                 <Route path="/dashboard/shipments" element={<ProtectedRoute><AdminShipments /></ProtectedRoute>} />
                 
-                {/* Hidden Admin Route - only accessible by admins */}
-                <Route path="/__internal__/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-                <Route path="/__internal__/admin/companies" element={<AdminRoute><AdminCompanies /></AdminRoute>} />
-                <Route path="/__internal__/admin/inventory" element={<AdminRoute><AdminInventory /></AdminRoute>} />
-                <Route path="/__internal__/admin/shipments" element={<AdminRoute><AdminShipments /></AdminRoute>} />
+                {/* Hidden Admin Routes - system overview only, no business data management */}
+                <Route path="/__internal__/admin" element={<AdminRoute><AdminSystemDashboard /></AdminRoute>} />
+                <Route path="/__internal__/admin/companies" element={<AdminRoute><AdminCompaniesView /></AdminRoute>} />
+                <Route path="/__internal__/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+                <Route path="/__internal__/admin/activity" element={<AdminRoute><AdminActivityLog /></AdminRoute>} />
                 
                 {/* Legacy routes redirect */}
                 <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
