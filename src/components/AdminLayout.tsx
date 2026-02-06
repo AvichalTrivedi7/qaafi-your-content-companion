@@ -9,7 +9,9 @@ import {
   X,
   ChevronLeft,
   Shield,
-  LogOut
+  LogOut,
+  Users,
+  Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -66,25 +68,44 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     return t('role.user');
   };
 
-  // Build nav items based on user permissions
+  // Check if we're on an admin-only route
+  const isOnAdminRoute = location.pathname.startsWith('/__internal__/admin');
+
+  // Build nav items based on user permissions and current route context
   const navItems = useMemo(() => {
     const items = [];
     
-    // Dashboard - everyone with dashboard access
+    // If on admin hidden route, show admin-only navigation
+    if (isAdmin && isOnAdminRoute) {
+      items.push({ 
+        to: '/__internal__/admin', 
+        icon: <LayoutDashboard className="h-5 w-5" />, 
+        label: t('admin.systemDashboard')
+      });
+      items.push({ 
+        to: '/__internal__/admin/companies', 
+        icon: <Building2 className="h-5 w-5" />, 
+        label: t('nav.companies') 
+      });
+      items.push({ 
+        to: '/__internal__/admin/users', 
+        icon: <Users className="h-5 w-5" />, 
+        label: t('admin.users') 
+      });
+      items.push({ 
+        to: '/__internal__/admin/activity', 
+        icon: <Activity className="h-5 w-5" />, 
+        label: t('admin.activityLog') 
+      });
+      return items;
+    }
+    
+    // Regular dashboard navigation
     if (canViewDashboard) {
       items.push({ 
         to: '/dashboard', 
         icon: <LayoutDashboard className="h-5 w-5" />, 
         label: t('nav.dashboard') 
-      });
-    }
-    
-    // Companies - admins only (via hidden admin route)
-    if (isAdmin) {
-      items.push({ 
-        to: '/__internal__/admin/companies', 
-        icon: <Building2 className="h-5 w-5" />, 
-        label: t('nav.companies') 
       });
     }
     
@@ -107,7 +128,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     }
     
     return items;
-  }, [canViewDashboard, canViewInventory, canViewShipments, isAdmin, t]);
+  }, [canViewDashboard, canViewInventory, canViewShipments, isAdmin, isOnAdminRoute, t]);
 
   return (
     <div className="min-h-screen bg-background">
