@@ -120,6 +120,12 @@ const translations: Translations = {
   'inventory.units.liters': { en: 'Liters', hi: 'लीटर' },
   'inventory.units.meters': { en: 'Meters', hi: 'मीटर' },
   
+  // Shipments - Additional
+  'shipments.shipmentDetails': { en: 'Shipment Details', hi: 'शिपमेंट विवरण' },
+  'shipments.deleteConfirmTitle': { en: 'Delete Shipment?', hi: 'शिपमेंट हटाएं?' },
+  'shipments.deleteConfirmDescription': { en: 'Are you sure you want to delete this shipment? This will release any reserved inventory.', hi: 'क्या आप वाकई इस शिपमेंट को हटाना चाहते हैं? यह किसी भी आरक्षित इन्वेंटरी को जारी करेगा।' },
+  'shipments.shipmentDeleted': { en: 'Shipment deleted successfully', hi: 'शिपमेंट सफलतापूर्वक हटाया गया' },
+  
   // Common
   'common.save': { en: 'Save', hi: 'सेव करें' },
   'common.cancel': { en: 'Cancel', hi: 'रद्द करें' },
@@ -135,6 +141,10 @@ const translations: Translations = {
   'common.items': { en: 'items', hi: 'आइटम' },
   'common.add': { en: 'Add', hi: 'जोड़ें' },
   'common.close': { en: 'Close', hi: 'बंद करें' },
+  'common.yes': { en: 'Yes', hi: 'हाँ' },
+  'common.no': { en: 'No', hi: 'नहीं' },
+  'common.more': { en: 'more', hi: 'और' },
+  'admin.company': { en: 'Company', hi: 'कंपनी' },
   'common.confirmDelete': { en: 'Confirm Delete', hi: 'हटाने की पुष्टि करें' },
   
   // Roles

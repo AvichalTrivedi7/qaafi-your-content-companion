@@ -7,22 +7,16 @@ import { companyService } from '@/services/companyService';
 import { inventoryService } from '@/services/inventoryService';
 import { Shipment, ShipmentStatus, ShipmentItem, InventoryItem, InventoryUnit } from '@/domain/models';
 import { ProductSelector, DEFAULT_LOW_STOCK_THRESHOLD } from '@/components/ProductSelector';
+import { ShipmentCardInteractive, ShipmentDetailDrawer } from '@/components/shipments';
 import { 
   Truck, 
   Plus, 
   Search, 
-  Building2,
-  Package,
-  MapPin,
-  Clock,
-  CheckCircle2,
   XCircle,
-  AlertTriangle
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -33,21 +27,16 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
-import { format } from 'date-fns';
 
 const AdminShipments = () => {
   const { t } = useLanguage();
-  const { toast } = useToast();
-  const { canUpdateShipments, isAdmin, profile } = useAuth();
+  const { profile } = useAuth();
   const companyId = profile?.companyId ?? undefined;
   
   // Refresh key for triggering re-renders
@@ -59,9 +48,8 @@ const AdminShipments = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<ShipmentStatus | 'all'>('all');
   const [filterCompany, setFilterCompany] = useState<string>('all');
-  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
-  const [newStatus, setNewStatus] = useState<ShipmentStatus>('pending');
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   
   // Create shipment dialog state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -95,44 +83,6 @@ const AdminShipments = () => {
     if (!companyId) return '-';
     const company = companies.find(c => c.id === companyId);
     return company?.name || '-';
-  };
-
-  const getStatusIcon = (status: ShipmentStatus) => {
-    switch (status) {
-      case 'pending': return <Clock className="h-4 w-4" />;
-      case 'in_transit': return <Truck className="h-4 w-4" />;
-      case 'delivered': return <CheckCircle2 className="h-4 w-4" />;
-      case 'cancelled': return <XCircle className="h-4 w-4" />;
-    }
-  };
-
-  const getStatusVariant = (status: ShipmentStatus) => {
-    switch (status) {
-      case 'pending': return 'secondary';
-      case 'in_transit': return 'default';
-      case 'delivered': return 'outline';
-      case 'cancelled': return 'destructive';
-    }
-  };
-
-  const openStatusDialog = (shipment: Shipment) => {
-    setSelectedShipment(shipment);
-    setNewStatus(shipment.status);
-    setStatusDialogOpen(true);
-  };
-
-  const handleStatusUpdate = () => {
-    if (!selectedShipment) return;
-    
-    const updated = shipmentService.updateStatus(selectedShipment.id, newStatus, companyId);
-    if (updated.success) {
-      refreshData();
-      toast({
-        title: t('shipments.updateStatus'),
-        description: `${selectedShipment.shipmentNumber} → ${t(`shipments.${newStatus}`)}`,
-      });
-    }
-    setStatusDialogOpen(false);
   };
 
   // Generate auto SKU for new products
@@ -258,6 +208,22 @@ const AdminShipments = () => {
     } else {
       sonnerToast.error(result.error || 'Failed to create shipment');
     }
+  };
+
+  const handleDeleteShipment = (shipmentId: string) => {
+    const result = shipmentService.updateStatus(shipmentId, 'cancelled', companyId);
+    if (result.success) {
+      sonnerToast.success(t('shipments.shipmentDeleted'));
+      refreshData();
+    } else {
+      sonnerToast.error(result.error || 'Failed to delete shipment');
+    }
+  };
+
+  const openDetail = (shipment: Shipment) => {
+    const freshShipment = shipmentService.getShipmentById(shipment.id, companyId);
+    setSelectedShipment(freshShipment || shipment);
+    setIsDetailOpen(true);
   };
 
   const resetCreateForm = () => {
@@ -424,76 +390,13 @@ const AdminShipments = () => {
         {/* Shipments Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredShipments.map(shipment => (
-            <Card key={shipment.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-base font-mono">
-                      {shipment.shipmentNumber}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {shipment.customerName}
-                    </p>
-                  </div>
-                  <Badge variant={getStatusVariant(shipment.status)}>
-                    {getStatusIcon(shipment.status)}
-                    <span className="ml-1">{t(`shipments.${shipment.status}`)}</span>
-                  </Badge>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  <span className="truncate">{shipment.destination}</span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Building2 className="h-4 w-4" />
-                  <span>{getCompanyName(shipment.companyId)}</span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Package className="h-4 w-4" />
-                  <span>{shipment.items.length} {t('common.items')}</span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  <span>{format(shipment.createdAt, 'MMM dd, yyyy')}</span>
-                </div>
-                
-                {/* Items list */}
-                <div className="pt-3 border-t border-border space-y-1">
-                  {shipment.items.slice(0, 2).map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-sm">
-                      <span className="truncate text-muted-foreground">{item.inventoryItemName}</span>
-                      <span className="font-medium">{item.quantity}</span>
-                    </div>
-                  ))}
-                  {shipment.items.length > 2 && (
-                    <p className="text-xs text-muted-foreground">
-                      +{shipment.items.length - 2} more
-                    </p>
-                  )}
-                </div>
-                
-                {/* Actions - only show update button if user can update shipments */}
-                {canUpdateShipments && (
-                  <div className="pt-3 border-t border-border">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => openStatusDialog(shipment)}
-                      disabled={shipment.status === 'delivered' || shipment.status === 'cancelled'}
-                    >
-                      {t('shipments.updateStatus')}
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ShipmentCardInteractive
+              key={shipment.id}
+              shipment={shipment}
+              companyName={getCompanyName(shipment.companyId)}
+              onClick={() => openDetail(shipment)}
+              onDelete={handleDeleteShipment}
+            />
           ))}
         </div>
 
@@ -506,43 +409,16 @@ const AdminShipments = () => {
           </Card>
         )}
 
-        {/* Status Update Dialog */}
-        <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t('shipments.updateStatus')}</DialogTitle>
-              <DialogDescription>
-                {selectedShipment?.shipmentNumber} - {selectedShipment?.customerName}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label>{t('shipments.status')}</Label>
-                <Select value={newStatus} onValueChange={(v) => setNewStatus(v as ShipmentStatus)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">{t('shipments.pending')}</SelectItem>
-                    <SelectItem value="in_transit">{t('shipments.inTransit')}</SelectItem>
-                    <SelectItem value="delivered">{t('shipments.delivered')}</SelectItem>
-                    <SelectItem value="cancelled">{t('shipments.cancelled')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button onClick={handleStatusUpdate}>
-                {t('common.save')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Shipment Detail Drawer */}
+        <ShipmentDetailDrawer
+          shipment={selectedShipment}
+          open={isDetailOpen}
+          onOpenChange={setIsDetailOpen}
+          inventoryItems={inventoryItems}
+          companyName={selectedShipment ? getCompanyName(selectedShipment.companyId) : undefined}
+          companyId={companyId}
+          onUpdate={refreshData}
+        />
       </div>
     </AdminLayout>
   );
