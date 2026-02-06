@@ -73,12 +73,14 @@ export class ActivityService {
     const icons: Record<ActivityType, string> = {
       [ActivityType.INVENTORY_IN]: 'plus',
       [ActivityType.INVENTORY_OUT]: 'minus',
+      [ActivityType.INVENTORY_UPDATED]: 'edit',
       [ActivityType.SHIPMENT_CREATED]: 'package',
       [ActivityType.SHIPMENT_UPDATED]: 'truck',
       [ActivityType.SHIPMENT_DELIVERED]: 'check-circle',
       [ActivityType.SHIPMENT_CANCELLED]: 'x-circle',
       [ActivityType.RESERVATION_CREATED]: 'lock',
       [ActivityType.RESERVATION_RELEASED]: 'unlock',
+      [ActivityType.COMPANY_CREATED]: 'building',
     };
     return icons[type] || 'activity';
   }
@@ -87,12 +89,14 @@ export class ActivityService {
     const colors: Record<ActivityType, 'success' | 'warning' | 'info' | 'default' | 'destructive'> = {
       [ActivityType.INVENTORY_IN]: 'success',
       [ActivityType.INVENTORY_OUT]: 'warning',
+      [ActivityType.INVENTORY_UPDATED]: 'info',
       [ActivityType.SHIPMENT_CREATED]: 'info',
       [ActivityType.SHIPMENT_UPDATED]: 'info',
       [ActivityType.SHIPMENT_DELIVERED]: 'success',
       [ActivityType.SHIPMENT_CANCELLED]: 'destructive',
       [ActivityType.RESERVATION_CREATED]: 'default',
       [ActivityType.RESERVATION_RELEASED]: 'default',
+      [ActivityType.COMPANY_CREATED]: 'success',
     };
     return colors[type] || 'default';
   }

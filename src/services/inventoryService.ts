@@ -121,10 +121,10 @@ export class InventoryService {
     const updated = this.inventoryRepo.update(id, updates);
     if (!updated) return null;
 
-    // Log activity
+    // Log activity with INVENTORY_UPDATED type
     this.activityRepo.create({
       id: crypto.randomUUID(),
-      type: ActivityType.INVENTORY_IN,
+      type: ActivityType.INVENTORY_UPDATED,
       description: `Updated product: ${updated.name}`,
       referenceId: id,
       referenceType: 'inventory',
