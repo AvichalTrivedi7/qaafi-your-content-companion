@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { AdminLayout } from '@/components/AdminLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { shipmentService } from '@/services/shipmentService';
 import { companyService } from '@/services/companyService';
 import { inventoryService } from '@/services/inventoryService';
-import { Shipment, ShipmentStatus } from '@/domain/models';
+import { Shipment, ShipmentStatus, ShipmentItem, InventoryItem, InventoryUnit } from '@/domain/models';
+import { ProductSelector, DEFAULT_LOW_STOCK_THRESHOLD } from '@/components/ProductSelector';
 import { 
   Truck, 
   Plus, 
@@ -36,23 +37,49 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import { format } from 'date-fns';
 
 const AdminShipments = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
-  const { canUpdateShipments, isAdmin } = useAuth();
-  const [shipments, setShipments] = useState<Shipment[]>(shipmentService.getAllShipments());
+  const { canUpdateShipments, isAdmin, profile } = useAuth();
+  const companyId = profile?.companyId ?? undefined;
+  
+  // Refresh key for triggering re-renders
+  const [refreshKey, setRefreshKey] = useState(0);
+  const shipments = useMemo(() => shipmentService.getAllShipments(companyId), [companyId, refreshKey]);
+  const inventoryItems = useMemo(() => inventoryService.getAllItems(companyId), [companyId, refreshKey]);
   const companies = companyService.getAll();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<ShipmentStatus | 'all'>('all');
   const [filterCompany, setFilterCompany] = useState<string>('all');
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
   const [newStatus, setNewStatus] = useState<ShipmentStatus>('pending');
+  
+  // Create shipment dialog state
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newCustomerName, setNewCustomerName] = useState('');
+  const [newDestination, setNewDestination] = useState('');
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [itemQuantity, setItemQuantity] = useState('');
+  const [shipmentItems, setShipmentItems] = useState<ShipmentItem[]>([]);
+  const [pendingNewItems, setPendingNewItems] = useState<InventoryItem[]>([]);
+
+  const refreshData = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+  }, []);
+
+  // Combine existing inventory with pending new items for the selector
+  const availableInventoryItems = useMemo(() => {
+    return [...inventoryItems, ...pendingNewItems];
+  }, [inventoryItems, pendingNewItems]);
 
   const filteredShipments = shipments.filter(shipment => {
     const matchesSearch = 
@@ -97,15 +124,149 @@ const AdminShipments = () => {
   const handleStatusUpdate = () => {
     if (!selectedShipment) return;
     
-    const updated = shipmentService.updateStatus(selectedShipment.id, newStatus);
-    if (updated) {
-      setShipments(shipmentService.getAllShipments());
+    const updated = shipmentService.updateStatus(selectedShipment.id, newStatus, companyId);
+    if (updated.success) {
+      refreshData();
       toast({
         title: t('shipments.updateStatus'),
         description: `${selectedShipment.shipmentNumber} → ${t(`shipments.${newStatus}`)}`,
       });
     }
     setStatusDialogOpen(false);
+  };
+
+  // Generate auto SKU for new products
+  const generateSku = (name: string): string => {
+    const prefix = name.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
+    const timestamp = Date.now().toString(36).toUpperCase();
+    return `${prefix}-${timestamp}`;
+  };
+
+  // Handle creating a new inventory item on-the-fly
+  const handleCreateNewProduct = (name: string, unit: InventoryUnit): InventoryItem | null => {
+    if (!companyId) {
+      sonnerToast.error('No company associated with your account');
+      return null;
+    }
+
+    // Check for duplicate (case-insensitive) in existing inventory
+    const existingItem = inventoryItems.find(
+      (item) => item.name.toLowerCase() === name.toLowerCase()
+    );
+    if (existingItem) {
+      sonnerToast.error(t('shipments.productExists'));
+      return null;
+    }
+
+    // Also check pending items
+    const pendingItem = pendingNewItems.find(
+      (item) => item.name.toLowerCase() === name.toLowerCase()
+    );
+    if (pendingItem) {
+      sonnerToast.error(t('shipments.productExists'));
+      return null;
+    }
+
+    // Create the new inventory item
+    const newItem = inventoryService.createItem({
+      sku: generateSku(name),
+      name,
+      unit,
+      lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
+      companyId,
+    });
+
+    // Track it as pending (will be added to shipment)
+    setPendingNewItems((prev) => [...prev, newItem]);
+    sonnerToast.success(t('shipments.productCreated'));
+    refreshData();
+    
+    return newItem;
+  };
+
+  const handleAddItem = () => {
+    if (!selectedItem || !itemQuantity) return;
+
+    const qty = parseInt(itemQuantity);
+    if (isNaN(qty) || qty <= 0) return;
+
+    // For existing items, validate stock availability
+    const isPendingNew = pendingNewItems.some((p) => p.id === selectedItem.id);
+    if (!isPendingNew && selectedItem.availableStock < qty) {
+      sonnerToast.error(`${t('error.insufficientStock')}: ${selectedItem.name} (${selectedItem.availableStock} ${selectedItem.unit} ${t('shipments.availableLabel')})`);
+      return;
+    }
+
+    // Check if item already added to shipment
+    const existingIndex = shipmentItems.findIndex(item => item.inventoryItemId === selectedItem.id);
+    if (existingIndex >= 0) {
+      // Update quantity - but validate total doesn't exceed available
+      const newTotal = shipmentItems[existingIndex].quantity + qty;
+      if (!isPendingNew && selectedItem.availableStock < newTotal) {
+        sonnerToast.error(`${t('error.insufficientStock')}: ${selectedItem.name}`);
+        return;
+      }
+      const updated = [...shipmentItems];
+      updated[existingIndex].quantity = newTotal;
+      setShipmentItems(updated);
+    } else {
+      setShipmentItems([
+        ...shipmentItems,
+        {
+          inventoryItemId: selectedItem.id,
+          inventoryItemName: selectedItem.name,
+          quantity: qty,
+        },
+      ]);
+    }
+
+    // If this was a pending new item, stock in the quantity
+    if (isPendingNew) {
+      inventoryService.stockIn(selectedItem.id, qty, companyId);
+      // Remove from pending since it's now been added
+      setPendingNewItems((prev) => prev.filter((p) => p.id !== selectedItem.id));
+      refreshData();
+    }
+    
+    setSelectedItem(null);
+    setItemQuantity('');
+  };
+
+  const handleRemoveItem = (index: number) => {
+    setShipmentItems(shipmentItems.filter((_, i) => i !== index));
+  };
+
+  const handleCreateShipment = () => {
+    if (!newCustomerName.trim() || !newDestination.trim() || shipmentItems.length === 0) return;
+    if (!companyId) {
+      sonnerToast.error('No company associated with your account');
+      return;
+    }
+
+    const result = shipmentService.createShipment(
+      newCustomerName,
+      newDestination,
+      shipmentItems,
+      companyId
+    );
+
+    if (result.success && result.data) {
+      sonnerToast.success(`Shipment ${result.data.shipmentNumber} created`);
+      resetCreateForm();
+      setIsCreateOpen(false);
+      refreshData();
+    } else {
+      sonnerToast.error(result.error || 'Failed to create shipment');
+    }
+  };
+
+  const resetCreateForm = () => {
+    setNewCustomerName('');
+    setNewDestination('');
+    setShipmentItems([]);
+    setSelectedItem(null);
+    setItemQuantity('');
+    setPendingNewItems([]);
   };
 
   return (
@@ -118,12 +279,107 @@ const AdminShipments = () => {
             <p className="text-muted-foreground">{t('admin.shipmentsSubtitle')}</p>
           </div>
           
-          {/* Create button - admins only */}
-          {isAdmin && (
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              {t('shipments.createShipment')}
-            </Button>
+          {/* Create button - available to all users with a company */}
+          {companyId && (
+            <Dialog open={isCreateOpen} onOpenChange={(open) => {
+              setIsCreateOpen(open);
+              if (!open) resetCreateForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  {t('shipments.createShipment')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{t('shipments.createShipment')}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label>{t('shipments.customerName')}</Label>
+                    <Input
+                      placeholder={t('shipments.enterCustomerName')}
+                      value={newCustomerName}
+                      onChange={(e) => setNewCustomerName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{t('shipments.destination')}</Label>
+                    <Input
+                      placeholder={t('shipments.destination')}
+                      value={newDestination}
+                      onChange={(e) => setNewDestination(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{t('shipments.items')}</Label>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <ProductSelector
+                          inventoryItems={availableInventoryItems}
+                          selectedItemId={selectedItem?.id || ''}
+                          onSelect={setSelectedItem}
+                          onCreateNew={handleCreateNewProduct}
+                        />
+                      </div>
+                      <Input
+                        type="number"
+                        placeholder={t('shipments.qty')}
+                        value={itemQuantity}
+                        onChange={(e) => setItemQuantity(e.target.value)}
+                        className="w-24"
+                        min="1"
+                      />
+                      <Button variant="secondary" onClick={handleAddItem} disabled={!selectedItem}>
+                        {t('common.add')}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {shipmentItems.length > 0 && (
+                    <div className="space-y-2">
+                      {shipmentItems.map((item, index) => {
+                        const invItem = availableInventoryItems.find(i => i.id === item.inventoryItemId);
+                        return (
+                          <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-muted">
+                            <span className="text-sm">{item.inventoryItemName}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">
+                                {item.quantity} {invItem?.unit || t('inventory.units')}
+                              </span>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleRemoveItem(index)}
+                                className="h-6 w-6 p-0"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-4">
+                    <Button variant="outline" onClick={() => setIsCreateOpen(false)} className="flex-1">
+                      {t('common.cancel')}
+                    </Button>
+                    <Button 
+                      onClick={handleCreateShipment} 
+                      className="flex-1" 
+                      disabled={!newCustomerName.trim() || !newDestination.trim() || shipmentItems.length === 0}
+                    >
+                      {t('shipments.createShipment')}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           )}
         </div>
 
