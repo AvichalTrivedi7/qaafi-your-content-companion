@@ -90,7 +90,7 @@ export class SupabaseInventoryRepository implements IInventoryRepository {
     return items.filter(item => item.availableStock <= item.lowStockThreshold);
   }
 
-  create(entity: InventoryItem): InventoryItem {
+  create(entity: InventoryItem, _companyId?: string): InventoryItem {
     // Add to cache immediately
     this.cache.set(entity.id, entity);
 

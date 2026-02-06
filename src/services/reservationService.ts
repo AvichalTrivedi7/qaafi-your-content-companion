@@ -77,7 +77,7 @@ export class ReservationService {
       updatedAt: new Date(),
     };
 
-    this.reservationRepo.create(newReservation);
+    this.reservationRepo.create(newReservation, companyId);
 
     // Log activity with company association
     this.activityService.logActivity(

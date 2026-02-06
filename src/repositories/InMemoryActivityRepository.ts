@@ -40,7 +40,7 @@ export class InMemoryActivityRepository implements IActivityRepository {
     return this.findAll(companyId).slice(0, limit);
   }
 
-  create(log: ActivityLog): ActivityLog {
+  create(log: ActivityLog, _companyId?: string): ActivityLog {
     this.logs.unshift(log);
     return log;
   }

@@ -74,7 +74,7 @@ export class SupabaseCompanyRepository implements ICompanyRepository {
     return Array.from(this.cache.values()).filter(c => c.isActive);
   }
 
-  create(entity: Company): Company {
+  create(entity: Company, _companyId?: string): Company {
     this.cache.set(entity.id, entity);
 
     const dbRow = toDbRow(entity);

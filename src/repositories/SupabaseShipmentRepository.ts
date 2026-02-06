@@ -85,7 +85,7 @@ export class SupabaseShipmentRepository implements IShipmentRepository {
     return shipments;
   }
 
-  create(entity: Shipment): Shipment {
+  create(entity: Shipment, _companyId?: string): Shipment {
     this.cache.set(entity.id, entity);
     this.count++;
 

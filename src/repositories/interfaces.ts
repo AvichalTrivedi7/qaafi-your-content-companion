@@ -21,7 +21,7 @@ import {
 export interface IBaseRepository<T> {
   findAll(): T[];
   findById(id: string): T | undefined;
-  create(entity: T): T;
+  create(entity: T, companyId?: string): T;
   update(id: string, updates: Partial<T>): T | undefined;
   delete(id: string): boolean;
 }

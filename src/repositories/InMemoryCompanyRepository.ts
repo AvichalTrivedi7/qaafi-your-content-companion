@@ -27,7 +27,7 @@ export class InMemoryCompanyRepository implements ICompanyRepository {
     return this.companies.filter(c => c.isActive);
   }
 
-  create(entity: Company): Company {
+  create(entity: Company, _companyId?: string): Company {
     this.companies.push(entity);
     return entity;
   }

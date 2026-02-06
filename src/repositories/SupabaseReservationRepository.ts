@@ -108,32 +108,49 @@ export class SupabaseReservationRepository implements IReservationRepository {
     );
   }
 
-  create(entity: Reservation): Reservation {
+  create(entity: Reservation, companyId?: string): Reservation {
     this.cache.set(entity.id, entity);
+    if (companyId) {
+      this.companyIdCache.set(entity.id, companyId);
+    }
 
-    // Get company_id from the associated shipment
-    supabase
-      .from('shipments')
-      .select('company_id')
-      .eq('id', entity.shipmentId)
-      .single()
-      .then(({ data: shipmentData }) => {
-        const companyId = shipmentData?.company_id;
-        if (companyId) {
-          this.companyIdCache.set(entity.id, companyId);
-        }
+    // If companyId is provided, use it directly; otherwise fetch from shipment
+    if (companyId) {
+      const dbRow = toDbRow(entity, companyId);
+      supabase
+        .from('reservations')
+        .insert(dbRow)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Failed to persist reservation:', error);
+            this.cache.delete(entity.id);
+          }
+        });
+    } else {
+      // Fallback: Get company_id from the associated shipment
+      supabase
+        .from('shipments')
+        .select('company_id')
+        .eq('id', entity.shipmentId)
+        .single()
+        .then(({ data: shipmentData }) => {
+          const fetchedCompanyId = shipmentData?.company_id;
+          if (fetchedCompanyId) {
+            this.companyIdCache.set(entity.id, fetchedCompanyId);
+          }
 
-        const dbRow = toDbRow(entity, companyId);
-        supabase
-          .from('reservations')
-          .insert(dbRow)
-          .then(({ error }) => {
-            if (error) {
-              console.error('Failed to persist reservation:', error);
-              this.cache.delete(entity.id);
-            }
-          });
-      });
+          const dbRow = toDbRow(entity, fetchedCompanyId);
+          supabase
+            .from('reservations')
+            .insert(dbRow)
+            .then(({ error }) => {
+              if (error) {
+                console.error('Failed to persist reservation:', error);
+                this.cache.delete(entity.id);
+              }
+            });
+        });
+    }
 
     return entity;
   }
