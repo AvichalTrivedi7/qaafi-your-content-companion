@@ -72,6 +72,9 @@ const translations: Translations = {
   'inventory.skuExists': { en: 'SKU already exists', hi: 'SKU पहले से मौजूद है' },
   'inventory.insufficientStock': { en: 'Insufficient stock available', hi: 'अपर्याप्त स्टॉक उपलब्ध' },
   'inventory.deleteConfirmMessage': { en: 'Are you sure you want to remove this product?', hi: 'क्या आप वाकई इस उत्पाद को हटाना चाहते हैं?' },
+  'inventory.filterAll': { en: 'All', hi: 'सभी' },
+  'inventory.filterLowStock': { en: 'Low Stock', hi: 'कम स्टॉक' },
+  'inventory.filterOutOfStock': { en: 'Out of Stock', hi: 'स्टॉक खत्म' },
   
   // Shipments
   'shipments.title': { en: 'Shipments', hi: 'शिपमेंट' },

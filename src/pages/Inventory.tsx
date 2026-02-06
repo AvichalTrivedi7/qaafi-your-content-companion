@@ -65,6 +65,8 @@ import { InventoryItem, ActivityType, INVENTORY_UNITS, InventoryUnit } from '@/d
 import { inventoryService } from '@/services/inventoryService';
 import { activityService } from '@/services/activityService';
 
+type StockFilter = 'all' | 'low' | 'out';
+
 const Inventory = () => {
   const { t } = useLanguage();
   const { profile, refreshProfile } = useAuth();
@@ -72,6 +74,7 @@ const Inventory = () => {
   
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [stockFilter, setStockFilter] = useState<StockFilter>('all');
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isStockActionOpen, setIsStockActionOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<InventoryItem | null>(null);
@@ -110,10 +113,22 @@ const Inventory = () => {
     );
   }
 
-  const filteredProducts = inventory.filter((product) =>
+  // Filter by search query (SKU + name, case-insensitive partial match)
+  const searchFiltered = inventory.filter((product) =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product.sku.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Apply stock level filter
+  const filteredProducts = searchFiltered.filter((product) => {
+    if (stockFilter === 'low') {
+      return product.availableStock > 0 && product.availableStock <= product.lowStockThreshold;
+    }
+    if (stockFilter === 'out') {
+      return product.availableStock === 0;
+    }
+    return true; // 'all'
+  });
 
   const handleAddProduct = () => {
     if (!newProductName.trim() || !newProductSku.trim()) {
@@ -317,15 +332,42 @@ const Inventory = () => {
         </Dialog>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder={t('inventory.searchProducts')}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t('inventory.searchProducts')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant={stockFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStockFilter('all')}
+          >
+            {t('inventory.filterAll')}
+          </Button>
+          <Button
+            variant={stockFilter === 'low' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStockFilter('low')}
+            className={stockFilter === 'low' ? '' : 'text-warning border-warning/50 hover:bg-warning/10'}
+          >
+            {t('inventory.filterLowStock')}
+          </Button>
+          <Button
+            variant={stockFilter === 'out' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setStockFilter('out')}
+            className={stockFilter === 'out' ? '' : 'text-destructive border-destructive/50 hover:bg-destructive/10'}
+          >
+            {t('inventory.filterOutOfStock')}
+          </Button>
+        </div>
       </div>
 
       {/* Products Table */}
