@@ -95,7 +95,7 @@ export class SupabaseActivityRepository implements IActivityRepository {
     return logs.slice(0, limit);
   }
 
-  create(log: ActivityLog): ActivityLog {
+  create(log: ActivityLog, _companyId?: string): ActivityLog {
     this.cache.set(log.id, log);
 
     const dbRow = toDbRow(log);

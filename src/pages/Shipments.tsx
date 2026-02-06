@@ -16,6 +16,7 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/AppLayout';
+import { CompanyOnboarding } from '@/components/CompanyOnboarding';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -50,7 +51,7 @@ const statusConfig: Record<ShipmentStatus, { icon: typeof Truck; color: string; 
 
 const Shipments = () => {
   const { t } = useLanguage();
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const companyId = profile?.companyId ?? undefined;
   
   // Use services for data - trigger re-render with state
@@ -75,6 +76,15 @@ const Shipments = () => {
   const refreshData = useCallback(() => {
     setRefreshKey(prev => prev + 1);
   }, []);
+
+  // Show onboarding if no company
+  if (!companyId) {
+    return (
+      <AppLayout>
+        <CompanyOnboarding onComplete={refreshProfile} />
+      </AppLayout>
+    );
+  }
 
   const filteredShipments = shipments.filter((shipment) => {
     const matchesSearch =
@@ -122,11 +132,16 @@ const Shipments = () => {
 
   const handleCreateShipment = () => {
     if (!newCustomerName.trim() || !newDestination.trim() || shipmentItems.length === 0) return;
+    if (!companyId) {
+      toast.error('No company associated with your account');
+      return;
+    }
 
     const result = shipmentService.createShipment(
       newCustomerName,
       newDestination,
-      shipmentItems
+      shipmentItems,
+      companyId
     );
 
     if (result.success && result.data) {
@@ -142,7 +157,7 @@ const Shipments = () => {
   };
 
   const handleUpdateStatus = (shipmentId: string, newStatus: ShipmentStatus) => {
-    const result = shipmentService.updateStatus(shipmentId, newStatus);
+    const result = shipmentService.updateStatus(shipmentId, newStatus, companyId);
     
     if (result.success && result.data) {
       toast.success(`Shipment updated to ${newStatus.replace('_', ' ')}`);
@@ -158,8 +173,8 @@ const Shipments = () => {
   };
 
   const openDetail = (shipment: Shipment) => {
-    // Get fresh data from service
-    const freshShipment = shipmentService.getShipmentById(shipment.id);
+    // Get fresh data from service (scoped to company)
+    const freshShipment = shipmentService.getShipmentById(shipment.id, companyId);
     setSelectedShipment(freshShipment || shipment);
     setIsDetailOpen(true);
   };

@@ -60,7 +60,7 @@ export class InMemoryReservationRepository implements IReservationRepository {
     );
   }
 
-  create(entity: Reservation): Reservation {
+  create(entity: Reservation, _companyId?: string): Reservation {
     this.reservations.push(entity);
     return entity;
   }

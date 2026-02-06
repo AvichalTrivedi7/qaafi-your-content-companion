@@ -28,7 +28,7 @@ export class InMemoryShipmentRepository implements IShipmentRepository {
     return shipments.filter(s => s.status === status);
   }
 
-  create(entity: Shipment): Shipment {
+  create(entity: Shipment, _companyId?: string): Shipment {
     this.shipments.push(entity);
     return entity;
   }

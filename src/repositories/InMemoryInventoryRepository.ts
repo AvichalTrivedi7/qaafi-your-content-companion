@@ -31,7 +31,7 @@ export class InMemoryInventoryRepository implements IInventoryRepository {
     return items.filter(item => item.availableStock <= item.lowStockThreshold);
   }
 
-  create(entity: InventoryItem): InventoryItem {
+  create(entity: InventoryItem, _companyId?: string): InventoryItem {
     this.items.push(entity);
     return entity;
   }
