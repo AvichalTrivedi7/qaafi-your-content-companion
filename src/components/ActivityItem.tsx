@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
-import { Package, Truck, ArrowUpCircle, ArrowDownCircle, Lock, Unlock, CheckCircle, XCircle, LucideIcon } from 'lucide-react';
+import { Package, Truck, ArrowUpCircle, ArrowDownCircle, Lock, Unlock, CheckCircle, XCircle, LucideIcon, Pencil, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ActivityType } from '@/domain/models';
 
@@ -21,6 +21,11 @@ const activityConfig: Record<ActivityType, { icon: LucideIcon; color: string; bg
     icon: ArrowDownCircle,
     color: 'text-warning',
     bgColor: 'bg-warning/10',
+  },
+  [ActivityType.INVENTORY_UPDATED]: {
+    icon: Pencil,
+    color: 'text-info',
+    bgColor: 'bg-info/10',
   },
   [ActivityType.SHIPMENT_CREATED]: {
     icon: Package,
@@ -51,6 +56,11 @@ const activityConfig: Record<ActivityType, { icon: LucideIcon; color: string; bg
     icon: Unlock,
     color: 'text-muted-foreground',
     bgColor: 'bg-muted',
+  },
+  [ActivityType.COMPANY_CREATED]: {
+    icon: Building2,
+    color: 'text-success',
+    bgColor: 'bg-success/10',
   },
 };
 
