@@ -211,6 +211,29 @@ const translations: Translations = {
   'admin.allCompanies': { en: 'All Companies', hi: 'सभी कंपनियाँ' },
   'admin.companiesViewOnly': { en: 'View all registered companies (read-only)', hi: 'सभी पंजीकृत कंपनियाँ देखें (केवल पढ़ने के लिए)' },
   'admin.created': { en: 'Created', hi: 'बनाया गया' },
+  
+  // Platform Overview
+  'admin.platformOverview': { en: 'Platform Overview', hi: 'प्लेटफ़ॉर्म अवलोकन' },
+  'admin.activeCompanies7Days': { en: 'Active Companies', hi: 'सक्रिय कंपनियाँ' },
+  'admin.newCompanies': { en: 'New Companies', hi: 'नई कंपनियाँ' },
+  'admin.last7Days': { en: 'last 7 days', hi: 'पिछले 7 दिन' },
+  
+  // System Usage
+  'admin.systemUsage': { en: 'System Usage', hi: 'सिस्टम उपयोग' },
+  'admin.totalShipments': { en: 'Total Shipments', hi: 'कुल शिपमेंट' },
+  'admin.shipmentsLast7Days': { en: 'Shipments (7 days)', hi: 'शिपमेंट (7 दिन)' },
+  'admin.deliveredShipments': { en: 'Delivered', hi: 'डिलीवर हो गया' },
+  'admin.cancelledShipments': { en: 'Cancelled', hi: 'रद्द' },
+  'admin.totalInventoryItems': { en: 'Inventory Items', hi: 'इन्वेंटरी आइटम' },
+  
+  // Risk Signals
+  'admin.riskSignals': { en: 'Risk & Adoption Signals', hi: 'जोखिम और अपनाने के संकेत' },
+  'admin.adoptionRisks': { en: 'Informational alerts about company adoption and usage patterns', hi: 'कंपनी अपनाने और उपयोग पैटर्न के बारे में सूचनात्मक अलर्ट' },
+  'admin.noRiskSignals': { en: 'No risk signals detected', hi: 'कोई जोखिम संकेत नहीं मिला' },
+  'admin.companiesNoShipments': { en: 'Companies with no shipments', hi: 'बिना शिपमेंट वाली कंपनियाँ' },
+  'admin.companiesInventoryNoShipments': { en: 'Companies with inventory but no shipments', hi: 'इन्वेंटरी वाली लेकिन बिना शिपमेंट वाली कंपनियाँ' },
+  'admin.companiesRepeatedCancellations': { en: 'Companies with repeated cancellations (3+)', hi: 'बार-बार रद्द करने वाली कंपनियाँ (3+)' },
+  'admin.systemActivityDescription': { en: 'Recent platform-level events', hi: 'हाल के प्लेटफ़ॉर्म-स्तरीय इवेंट' },
   'admin.inactive': { en: 'Inactive', hi: 'निष्क्रिय' },
   'company.type.manufacturer': { en: 'Manufacturer', hi: 'निर्माता' },
   'external.welcome': { en: 'Welcome', hi: 'स्वागत है' },
