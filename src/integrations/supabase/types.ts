@@ -330,6 +330,8 @@ export type Database = {
         | "SHIPMENT_CANCELLED"
         | "RESERVATION_CREATED"
         | "RESERVATION_RELEASED"
+        | "INVENTORY_UPDATED"
+        | "COMPANY_CREATED"
       app_role:
         | "admin"
         | "user"
@@ -477,6 +479,8 @@ export const Constants = {
         "SHIPMENT_CANCELLED",
         "RESERVATION_CREATED",
         "RESERVATION_RELEASED",
+        "INVENTORY_UPDATED",
+        "COMPANY_CREATED",
       ],
       app_role: [
         "admin",
