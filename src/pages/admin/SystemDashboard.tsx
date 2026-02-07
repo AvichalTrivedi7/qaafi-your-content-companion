@@ -54,6 +54,7 @@ interface PlatformStats {
 const SYSTEM_ACTIVITY_TYPES = [
   'COMPANY_CREATED',
   'INVENTORY_IN',
+  'INVENTORY_UPDATED',
   'SHIPMENT_CREATED',
   'SHIPMENT_CANCELLED'
 ] as const;

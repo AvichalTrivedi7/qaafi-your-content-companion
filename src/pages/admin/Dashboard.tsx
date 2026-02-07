@@ -1,16 +1,14 @@
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/AdminLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatCard } from '@/components/StatCard';
 import { ActivityItem } from '@/components/ActivityItem';
 import { dashboardService } from '@/services/dashboardService';
-import { companyService } from '@/services/companyService';
 import { 
   Package, 
   Truck, 
   AlertTriangle, 
-  Building2,
   ArrowUpRight,
   ArrowDownRight,
   Clock
@@ -20,11 +18,13 @@ import { Badge } from '@/components/ui/badge';
 
 const AdminDashboard = () => {
   const { t } = useLanguage();
-  const { canViewDashboard, isLoading, isAdmin } = useAuth();
-  const navigate = useNavigate();
+  const { canViewDashboard, isLoading, isAdmin, rolesLoaded } = useAuth();
   const stats = dashboardService.getStats();
-  const companyStats = companyService.getStats();
 
+  // Redirect admin users to the platform oversight dashboard
+  if (!isLoading && rolesLoaded && isAdmin) {
+    return <Navigate to="/__internal__/admin" replace />;
+  }
 
   if (isLoading) {
     return (
@@ -46,42 +46,12 @@ const AdminDashboard = () => {
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            {isAdmin ? t('admin.dashboard') : t('dashboard.personalDashboard')}
+            {t('dashboard.personalDashboard')}
           </h1>
           <p className="text-muted-foreground">
-            {isAdmin ? t('admin.dashboardSubtitle') : t('dashboard.personalDashboardSubtitle')}
+            {t('dashboard.personalDashboardSubtitle')}
           </p>
         </div>
-
-        {/* Company Overview - Admin only */}
-        {isAdmin && (
-          <div className="grid gap-4 md:grid-cols-4">
-            <StatCard
-              title={t('admin.totalCompanies')}
-              value={companyStats.totalCompanies}
-              subtitle={`${companyStats.activeCount} ${t('admin.active')}`}
-              icon={Building2}
-            />
-            <StatCard
-              title={t('admin.suppliers')}
-              value={companyStats.supplierCount}
-              icon={Building2}
-              variant="info"
-            />
-            <StatCard
-              title={t('admin.wholesalers')}
-              value={companyStats.wholesalerCount}
-              icon={Building2}
-              variant="success"
-            />
-            <StatCard
-              title={t('admin.retailers')}
-              value={companyStats.retailerCount}
-              icon={Building2}
-              variant="warning"
-            />
-          </div>
-        )}
 
         {/* Inventory & Shipment Stats */}
         <div className="grid gap-4 md:grid-cols-4">

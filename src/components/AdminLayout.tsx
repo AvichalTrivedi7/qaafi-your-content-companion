@@ -68,15 +68,13 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     return t('role.user');
   };
 
-  // Check if we're on an admin-only route
-  const isOnAdminRoute = location.pathname.startsWith('/__internal__/admin');
 
   // Build nav items based on user permissions and current route context
   const navItems = useMemo(() => {
     const items = [];
     
-    // If on admin hidden route, show admin-only navigation
-    if (isAdmin && isOnAdminRoute) {
+    // Admins always see admin-only navigation (no inventory/shipments)
+    if (isAdmin) {
       items.push({ 
         to: '/__internal__/admin', 
         icon: <LayoutDashboard className="h-5 w-5" />, 
@@ -100,7 +98,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
       return items;
     }
     
-    // Regular dashboard navigation
+    // Regular dashboard navigation for non-admin users
     if (canViewDashboard) {
       items.push({ 
         to: '/dashboard', 
@@ -109,7 +107,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
       });
     }
     
-    // Inventory - admins and wholesalers
+    // Inventory - non-admin users only
     if (canViewInventory) {
       items.push({ 
         to: '/dashboard/inventory', 
@@ -118,7 +116,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
       });
     }
     
-    // Shipments - admins, wholesalers, logistics, retailers (with different permissions)
+    // Shipments - non-admin users only
     if (canViewShipments) {
       items.push({ 
         to: '/dashboard/shipments', 
@@ -128,7 +126,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     }
     
     return items;
-  }, [canViewDashboard, canViewInventory, canViewShipments, isAdmin, isOnAdminRoute, t]);
+  }, [canViewDashboard, canViewInventory, canViewShipments, isAdmin, t]);
 
   return (
     <div className="min-h-screen bg-background">
