@@ -8,7 +8,6 @@ import {
   Menu, 
   X,
   ChevronLeft,
-  Shield,
   LogOut,
   Users,
   Activity
@@ -19,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import kaafiLogo from '@/assets/kaafi_logo.png';
 
 interface NavItemProps {
   to: string;
@@ -142,7 +142,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
             {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
           <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-sidebar-primary" />
+            <img src={kaafiLogo} alt="Qaafi" className="h-6 w-auto" />
             <span className="text-xl font-bold text-sidebar-primary">{t('app.name')}</span>
             <span className="text-xs bg-sidebar-accent text-sidebar-accent-foreground px-2 py-0.5 rounded-full">
               {t('role.admin')}
@@ -166,7 +166,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
           {!isCollapsed && (
             <div>
               <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-sidebar-primary" />
+                <img src={kaafiLogo} alt="Qaafi" className="h-6 w-auto" />
                 <h1 className="text-xl font-bold text-sidebar-primary">{t('app.name')}</h1>
               </div>
               <div className="flex items-center gap-2 mt-0.5">
