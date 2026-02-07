@@ -1,164 +1,100 @@
 
-# Admin Dashboard Refactor: Platform-Level Oversight
 
-## Overview
-This refactor transforms the admin dashboard from showing user-level operational data to displaying platform-level oversight metrics focused on system health, adoption, and risk signals.
+# Refactor: Separate Admin Dashboard from User Dashboard
 
-## Current State Analysis
+## Problem
 
-The existing `SystemDashboard.tsx` shows:
-- Total Companies (with active count)
-- Total Users
-- Recent Activities count
-- Global Activity Log
+When an admin logs in and goes to `/dashboard`, they see the same user-level operational dashboard (inventory quantities, stock movement, delivery time, low stock alerts) that regular users see. This is incorrect -- admins are platform operators, not business users.
 
-The existing `Dashboard.tsx` shows user-level metrics that should NOT appear in admin context:
-- Inventory quantities
-- Today's stock movement
-- Average delivery time
-- Low stock alerts
-- Needs attention items
-- In-transit shipments
+The correct admin dashboard already exists at `/__internal__/admin/` (SystemDashboard.tsx) with platform-level metrics, but admins can still access user-level views via `/dashboard`, `/dashboard/inventory`, and `/dashboard/shipments`.
+
+## Solution
+
+Redirect admin users away from user-level routes entirely, so they always land on the platform oversight dashboard. No changes to the user dashboard.
 
 ---
 
-## Implementation Plan
+## Changes
 
-### 1. Refactor SystemDashboard.tsx - Platform Overview Section
+### 1. Redirect Admin Users from `/dashboard` to `/__internal__/admin`
 
-**Remove**: Any user-level operational metrics (none currently exist in this file, but ensure it stays clean)
+**File: `src/pages/admin/Dashboard.tsx`**
 
-**Add/Modify Platform-Level Overview Cards**:
+Add an early check: if the user is an admin, redirect them to `/__internal__/admin` instead of showing user-level operational data. Non-admin users continue to see the exact same dashboard they see today -- zero changes for them.
 
-| Metric | Query Logic |
-|--------|-------------|
-| Total Companies | `COUNT(*)` from `companies` table |
-| Active Companies | Companies with activity logs in last 7 days |
-| Total Users | `COUNT(*)` from `profiles` table |
-| New Companies | Companies with `created_at` within last 7 days |
+Also remove the admin-specific "Company Overview" section (Suppliers / Wholesalers / Retailers cards) since admins will never reach this component anymore.
 
-### 2. Add System Usage Metrics Section
+### 2. Remove Inventory & Shipments from Admin Navigation
 
-**New Cards**:
+**File: `src/components/AdminLayout.tsx`**
 
-| Metric | Query Logic |
-|--------|-------------|
-| Total Shipments | `COUNT(*)` from `shipments` table (platform-wide) |
-| Shipments (7 days) | Shipments with `created_at` within last 7 days |
-| Delivered Shipments | `COUNT(*)` where `status = 'delivered'` |
-| Cancelled Shipments | `COUNT(*)` where `status = 'cancelled'` |
-| Total Inventory Items | `COUNT(*)` from `inventory_items` (count only, no quantities) |
+Update the navigation builder so that when the user is an admin (regardless of route), the sidebar only shows:
+- System Dashboard
+- Companies (read-only)
+- Users (read-only)  
+- Activity Logs
 
-### 3. Add Risk & Adoption Signals Section
+Remove Inventory and Shipments from admin's nav items entirely. Non-admin users still see their normal navigation.
 
-**Informational Alerts** (read-only, no actions):
+### 3. Add INVENTORY_UPDATED to System Activity Feed
 
-| Signal | Detection Logic |
-|--------|-----------------|
-| Companies with no shipments | Companies that exist but have zero shipments |
-| Companies with inventory but no shipments | Companies with `inventory_items` but zero `shipments` |
-| Companies with repeated cancellations | Companies with 3+ cancelled shipments |
+**File: `src/pages/admin/SystemDashboard.tsx`**
 
-These will be displayed as information cards with company names and counts.
+Add `INVENTORY_UPDATED` to the `SYSTEM_ACTIVITY_TYPES` filter so the platform activity feed includes inventory update events alongside the existing COMPANY_CREATED, INVENTORY_IN, SHIPMENT_CREATED, and SHIPMENT_CANCELLED types.
 
-### 4. Recent System Activity Feed
+### 4. Add Translation Key
 
-**Retain existing activity feed** but filter to show only these activity types:
-- `COMPANY_CREATED`
-- `INVENTORY_IN` (inventory created)
-- `SHIPMENT_CREATED`
-- `SHIPMENT_CANCELLED`
+**File: `src/contexts/LanguageContext.tsx`**
 
-Display with company name attribution.
-
-### 5. Update Translations
-
-Add new translation keys for:
-- `admin.activeCompanies7Days`
-- `admin.newCompanies`
-- `admin.systemUsage`
-- `admin.totalShipments`
-- `admin.shipmentsLast7Days`
-- `admin.deliveredShipments`
-- `admin.cancelledShipments`
-- `admin.totalInventoryItems`
-- `admin.riskSignals`
-- `admin.companiesNoShipments`
-- `admin.companiesInventoryNoShipments`
-- `admin.companiesRepeatedCancellations`
-- `admin.adoptionRisks`
+Add the `admin.systemActivityDescription` translation key if missing (for the activity feed section subtitle).
 
 ---
 
-## Technical Implementation
+## What Does NOT Change
 
-### Data Fetching Strategy
+- User dashboard (`Dashboard.tsx` for non-admins) -- identical experience
+- Database schema -- no modifications
+- Roles or permissions -- no additions
+- `SystemDashboard.tsx` metrics -- already correct (Total Companies, Active Companies, Total Users, New Companies, System Usage, Risk Signals)
 
-All data will be fetched directly from Supabase in the component using the existing `supabase` client. The queries will be:
+## Technical Details
+
+### Redirect Logic in Dashboard.tsx
 
 ```text
-1. Companies Overview:
-   - All companies count
-   - New companies (created_at > 7 days ago)
-   - Active companies (distinct company_id from activity_logs where created_at > 7 days ago)
-
-2. System Usage:
-   - Total shipments count
-   - Shipments created in last 7 days
-   - Delivered shipments count
-   - Cancelled shipments count
-   - Total inventory items count
-
-3. Risk Signals:
-   - Companies with 0 shipments (LEFT JOIN companies to shipments, WHERE shipment IS NULL)
-   - Companies with inventory but no shipments
-   - Companies with 3+ cancelled shipments (GROUP BY company_id HAVING COUNT > 2)
+if (isAdmin && rolesLoaded) {
+  return <Navigate to="/__internal__/admin" replace />;
+}
 ```
 
-### Component Structure
+This ensures admins are immediately sent to the platform dashboard. The `rolesLoaded` check prevents premature redirects during auth initialization.
+
+### Navigation Logic in AdminLayout.tsx
 
 ```text
-AdminSystemDashboard
-+-- Platform Overview Section (4 cards grid)
-|   +-- Total Companies
-|   +-- Active Companies (7 days)
-|   +-- Total Users
-|   +-- New Companies (7 days)
-|
-+-- System Usage Section (5 cards grid)
-|   +-- Total Shipments
-|   +-- Shipments (7 days)
-|   +-- Delivered
-|   +-- Cancelled
-|   +-- Inventory Items
-|
-+-- Risk & Adoption Signals Section (Card with list)
-|   +-- Companies with no shipments after onboarding
-|   +-- Companies with inventory but no shipments
-|   +-- Companies with repeated cancellations
-|
-+-- Recent System Activity Feed (Card with filtered activity list)
-    +-- COMPANY_CREATED
-    +-- INVENTORY_IN
-    +-- SHIPMENT_CREATED
-    +-- SHIPMENT_CANCELLED
+if (isAdmin) {
+  // Always show admin navigation (system dashboard, companies, users, activity)
+  // Never show inventory or shipments
+  return adminNavItems;
+}
+// Non-admin users see regular navigation (dashboard, inventory, shipments)
+```
+
+### Activity Types Update
+
+```text
+Before: ['COMPANY_CREATED', 'INVENTORY_IN', 'SHIPMENT_CREATED', 'SHIPMENT_CANCELLED']
+After:  ['COMPANY_CREATED', 'INVENTORY_IN', 'INVENTORY_UPDATED', 'SHIPMENT_CREATED', 'SHIPMENT_CANCELLED']
 ```
 
 ---
 
-## Files to Modify
+## Files Modified
 
-| File | Changes |
-|------|---------|
-| `src/pages/admin/SystemDashboard.tsx` | Complete rewrite with new platform metrics |
-| `src/contexts/LanguageContext.tsx` | Add new translation keys |
+| File | Change |
+|------|--------|
+| `src/pages/admin/Dashboard.tsx` | Add admin redirect, remove admin-only company overview section |
+| `src/components/AdminLayout.tsx` | Remove Inventory/Shipments from admin nav, always show admin nav for admins |
+| `src/pages/admin/SystemDashboard.tsx` | Add `INVENTORY_UPDATED` to activity feed filter |
+| `src/contexts/LanguageContext.tsx` | Add any missing translation keys |
 
----
-
-## Constraints Verification
-
-- User dashboard (`Dashboard.tsx`) - NOT modified
-- Database schema - NOT modified
-- No new roles added
-- This is purely UI + query refactor
-- Admin navigation scope remains: Companies (read-only), Users (read-only), Activity logs, System dashboard
