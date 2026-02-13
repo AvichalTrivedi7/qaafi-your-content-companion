@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Mail, Lock, Building2 } from 'lucide-react';
 import { z } from 'zod';
+import kaafiLogo from '@/assets/kaafi_logo.png';
 
 const emailSchema = z.string().email('Invalid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -197,9 +198,7 @@ const Auth = () => {
       {/* Header */}
       <header className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">Q</span>
-          </div>
+          <img src={kaafiLogo} alt="Qaafi" className="h-8 w-auto" />
           <span className="font-semibold text-lg">{t('app.name')}</span>
         </div>
         <LanguageToggle />
@@ -210,9 +209,7 @@ const Auth = () => {
         {step === 'auth' ? (
           <Card className="w-full max-w-md">
             <CardHeader className="text-center">
-              <div className="mx-auto h-12 w-12 rounded-xl bg-primary flex items-center justify-center mb-4">
-                <span className="text-primary-foreground font-bold text-lg">Q</span>
-              </div>
+              <img src={kaafiLogo} alt="Qaafi" className="mx-auto h-12 w-auto mb-4" />
               <CardTitle className="text-2xl">{t('app.name')}</CardTitle>
               <CardDescription>{t('app.tagline')}</CardDescription>
             </CardHeader>
