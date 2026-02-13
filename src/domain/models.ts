@@ -8,6 +8,9 @@
 export const SHIPMENT_STATUSES = ['pending', 'in_transit', 'delivered', 'cancelled'] as const;
 export type ShipmentStatus = typeof SHIPMENT_STATUSES[number];
 
+export const MOVEMENT_TYPES = ['inbound', 'outbound'] as const;
+export type MovementType = typeof MOVEMENT_TYPES[number];
+
 /**
  * Standardized Activity Types
  * All activity logs must use one of these explicit values
@@ -86,6 +89,7 @@ export interface Shipment {
   customerName: string;
   destination: string;
   status: ShipmentStatus;
+  movementType: MovementType;
   items: ShipmentItem[];
   proofOfDelivery?: string;
   companyId?: string;

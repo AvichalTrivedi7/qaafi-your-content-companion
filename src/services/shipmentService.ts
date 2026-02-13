@@ -2,8 +2,9 @@
 // All methods require companyId for data isolation
 // Implements transactional safety with rollback for multi-step operations
 // Uses repository pattern for data access
+// Supports inbound (procurement) and outbound (dispatch) movement types
 
-import { Shipment, ShipmentStatus, ShipmentStats, ShipmentItem, ActivityType } from '@/domain/models';
+import { Shipment, ShipmentStatus, ShipmentStats, ShipmentItem, ActivityType, MovementType } from '@/domain/models';
 import { 
   IShipmentRepository, 
   IInventoryRepository,
@@ -41,6 +42,11 @@ export class ShipmentService {
     return this.shipmentRepo.findByCompany(companyId);
   }
 
+  // Get shipments by movement type
+  getShipmentsByMovementType(movementType: MovementType, companyId?: string): Shipment[] {
+    return this.getAllShipments(companyId).filter(s => s.movementType === movementType);
+  }
+
   // Get shipment by ID, scoped to company
   getShipmentById(id: string, companyId?: string): Shipment | undefined {
     const shipment = this.shipmentRepo.findById(id);
@@ -74,9 +80,33 @@ export class ShipmentService {
     };
   }
 
+  // Get monthly movement stats
+  getMonthlyMovementStats(companyId?: string): { inboundCount: number; outboundCount: number; netMovement: number } {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const shipments = this.getAllShipments(companyId).filter(
+      s => s.createdAt >= startOfMonth
+    );
+
+    const inboundShipments = shipments.filter(s => s.movementType === 'inbound');
+    const outboundShipments = shipments.filter(s => s.movementType === 'outbound');
+
+    const inboundQty = inboundShipments
+      .filter(s => s.status === 'delivered')
+      .reduce((sum, s) => sum + s.items.reduce((is, i) => is + i.quantity, 0), 0);
+    const outboundQty = outboundShipments
+      .filter(s => s.status === 'delivered')
+      .reduce((sum, s) => sum + s.items.reduce((is, i) => is + i.quantity, 0), 0);
+
+    return {
+      inboundCount: inboundShipments.length,
+      outboundCount: outboundShipments.length,
+      netMovement: inboundQty - outboundQty,
+    };
+  }
+
   /**
-   * Validates if all items have sufficient available stock
-   * Scoped to company
+   * Validates if all items have sufficient available stock (outbound only)
    */
   validateItemsAvailability(items: ShipmentItem[], companyId?: string): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
@@ -96,89 +126,89 @@ export class ShipmentService {
   }
 
   /**
-   * Creates a new shipment and reserves inventory for all items
-   * Uses transactional safety - rolls back all reservations if any step fails
-   * Returns null if reservation fails for any item
-   * Scoped to company
+   * Creates a new shipment
+   * - Outbound: reserves inventory for all items
+   * - Inbound: no reservations, just tracks the incoming order
    */
   createShipment(
     customerName: string,
     destination: string,
     items: ShipmentItem[],
-    companyId?: string
+    companyId?: string,
+    movementType: MovementType = 'outbound'
   ): TransactionResult<Shipment> & { errors: string[] } {
     return executeTransactionSync<Shipment>((ctx: TransactionContext) => {
-      // Validate availability first
-      const validation = this.validateItemsAvailability(items, companyId);
-      if (!validation.valid) {
-        return { success: false, data: null, error: validation.errors.join('; ') };
+      // For outbound, validate availability and create reservations
+      if (movementType === 'outbound') {
+        const validation = this.validateItemsAvailability(items, companyId);
+        if (!validation.valid) {
+          return { success: false, data: null, error: validation.errors.join('; ') };
+        }
       }
 
-      // Generate shipment ID first so we can use it for reservations
       const shipmentId = crypto.randomUUID();
       const shipmentCount = this.shipmentRepo.findAll().length;
-      const shipmentNumber = `SHP-${new Date().getFullYear()}-${String(shipmentCount + 1).padStart(3, '0')}`;
-      // Create reservations for all items with rollback tracking
-      for (const item of items) {
-        const success = this.reservationService.createReservation(
-          item.inventoryItemId,
-          shipmentId,
-          item.quantity,
-          companyId
-        );
+      const prefix = movementType === 'inbound' ? 'INB' : 'SHP';
+      const shipmentNumber = `${prefix}-${new Date().getFullYear()}-${String(shipmentCount + 1).padStart(3, '0')}`;
 
-        if (!success) {
-          return {
-            success: false,
-            data: null,
-            error: `Failed to reserve ${item.inventoryItemName}`
-          };
-        }
-
-        // Register rollback action for this reservation
-        ctx.addRollback({
-          description: `Cancel reservation for ${item.inventoryItemName}`,
-          execute: () => this.reservationService.cancelReservation(
+      // Only create reservations for outbound
+      if (movementType === 'outbound') {
+        for (const item of items) {
+          const success = this.reservationService.createReservation(
             item.inventoryItemId,
             shipmentId,
+            item.quantity,
             companyId
-          ),
-        });
+          );
+
+          if (!success) {
+            return {
+              success: false,
+              data: null,
+              error: `Failed to reserve ${item.inventoryItemName}`
+            };
+          }
+
+          ctx.addRollback({
+            description: `Cancel reservation for ${item.inventoryItemName}`,
+            execute: () => this.reservationService.cancelReservation(
+              item.inventoryItemId,
+              shipmentId,
+              companyId
+            ),
+          });
+        }
       }
 
-      // Create the shipment object
       const newShipment: Shipment = {
         id: shipmentId,
         shipmentNumber,
         customerName,
         destination,
         status: 'pending',
+        movementType,
         items,
         companyId,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      // Add shipment to repository
       this.shipmentRepo.create(newShipment);
 
-      // Register rollback for shipment creation
       ctx.addRollback({
         description: `Remove shipment ${shipmentNumber}`,
         execute: () => this.shipmentRepo.delete(shipmentId),
       });
 
-      // Log activity with company association
       const activityId = this.activityService.logActivity(
         ActivityType.SHIPMENT_CREATED,
-        `Created shipment ${shipmentNumber} for ${customerName}`,
+        `Created ${movementType} shipment ${shipmentNumber} for ${customerName}`,
         shipmentId,
         'shipment',
-        { destination, itemCount: items.length },
+        { destination, itemCount: items.length, movementType },
         companyId
       );
 
-      // Register rollback for activity log
       if (activityId) {
         ctx.addRollback({
           description: `Remove activity log for shipment creation`,
@@ -191,11 +221,11 @@ export class ShipmentService {
   }
 
   /**
-   * Updates shipment status with proper reservation handling and transactional safety:
-   * - 'delivered': Fulfills reservations (permanently deducts from reserved stock)
-   * - 'cancelled': Releases reservations (returns to available stock)
-   * Rolls back all changes if any step fails
-   * Scoped to company
+   * Updates shipment status with proper handling based on movement type:
+   * - Outbound delivered: Fulfills reservations (permanently deducts reserved stock)
+   * - Outbound cancelled: Releases reservations (returns to available stock)
+   * - Inbound delivered: Increases available stock (stock in)
+   * - Inbound cancelled: No inventory changes needed
    */
   updateStatus(
     shipmentId: string,
@@ -210,12 +240,10 @@ export class ShipmentService {
 
       const previousStatus = shipment.status;
 
-      // Verify company ownership
       if (companyId && shipment.companyId !== companyId) {
         return { success: false, data: null, error: 'Shipment not found' };
       }
 
-      // Validate status transition
       if (!this.canTransitionTo(shipment.status, newStatus)) {
         return {
           success: false,
@@ -224,13 +252,17 @@ export class ShipmentService {
         };
       }
 
-      // Store original shipment state for potential rollback
       const originalShipment = { ...shipment };
 
-      // Handle status-specific logic
       if (newStatus === 'delivered') {
+        if (shipment.movementType === 'inbound') {
+          return this.handleInboundDelivery(ctx, shipment, originalShipment);
+        }
         return this.handleDelivery(ctx, shipment, originalShipment);
       } else if (newStatus === 'cancelled') {
+        if (shipment.movementType === 'inbound') {
+          return this.handleInboundCancellation(ctx, shipment, originalShipment);
+        }
         return this.handleCancellation(ctx, shipment, originalShipment);
       } else {
         return this.handleStandardTransition(ctx, shipment, newStatus, previousStatus);
@@ -239,14 +271,13 @@ export class ShipmentService {
   }
 
   /**
-   * Handles delivery status transition with transactional safety
+   * Handles outbound delivery with reservation fulfillment
    */
   private handleDelivery(
     ctx: TransactionContext,
     shipment: Shipment,
     originalShipment: Shipment
   ): TransactionResult<Shipment> {
-    // Fulfill reservations for all items
     for (const item of shipment.items) {
       const fulfilled = this.reservationService.fulfillReservation(
         item.inventoryItemId,
@@ -262,7 +293,6 @@ export class ShipmentService {
         };
       }
 
-      // Register rollback: restore reservation (move back from fulfilled to active)
       ctx.addRollback({
         description: `Restore reservation for ${item.inventoryItemName}`,
         execute: () => this.reservationService.restoreReservation(
@@ -274,10 +304,8 @@ export class ShipmentService {
       });
     }
 
-    // Update shipment status
     const updatedShipment = this.shipmentRepo.updateStatus(shipment.id, 'delivered', new Date());
 
-    // Register rollback for shipment status
     ctx.addRollback({
       description: `Restore shipment to ${originalShipment.status}`,
       execute: () => {
@@ -289,13 +317,24 @@ export class ShipmentService {
       },
     });
 
-    // Log activity
+    // Log INVENTORY_OUT for each item on outbound delivery
+    for (const item of shipment.items) {
+      this.activityService.logActivity(
+        ActivityType.INVENTORY_OUT,
+        `Stock out: -${item.quantity} of ${item.inventoryItemName} (shipment ${shipment.shipmentNumber})`,
+        item.inventoryItemId,
+        'inventory',
+        { quantity: item.quantity, shipmentId: shipment.id, action: 'shipment_delivered' },
+        shipment.companyId
+      );
+    }
+
     const activityId = this.activityService.logActivity(
       ActivityType.SHIPMENT_DELIVERED,
-      `Shipment ${shipment.shipmentNumber} delivered`,
+      `Outbound shipment ${shipment.shipmentNumber} delivered`,
       shipment.id,
       'shipment',
-      { previousStatus: originalShipment.status },
+      { previousStatus: originalShipment.status, movementType: 'outbound' },
       shipment.companyId
     );
 
@@ -310,14 +349,73 @@ export class ShipmentService {
   }
 
   /**
-   * Handles cancellation status transition with transactional safety
+   * Handles inbound delivery - increases inventory stock
+   */
+  private handleInboundDelivery(
+    ctx: TransactionContext,
+    shipment: Shipment,
+    originalShipment: Shipment
+  ): TransactionResult<Shipment> {
+    // Increase available stock for each item
+    for (const item of shipment.items) {
+      const result = this.inventoryService.stockIn(item.inventoryItemId, item.quantity, shipment.companyId);
+      if (!result) {
+        return {
+          success: false,
+          data: null,
+          error: `Failed to stock in ${item.inventoryItemName}`
+        };
+      }
+
+      ctx.addRollback({
+        description: `Reverse stock in for ${item.inventoryItemName}`,
+        execute: () => {
+          this.inventoryService.stockOut(item.inventoryItemId, item.quantity, shipment.companyId);
+          return true;
+        },
+      });
+    }
+
+    const updatedShipment = this.shipmentRepo.updateStatus(shipment.id, 'delivered', new Date());
+
+    ctx.addRollback({
+      description: `Restore shipment to ${originalShipment.status}`,
+      execute: () => {
+        this.shipmentRepo.update(shipment.id, {
+          status: originalShipment.status,
+          deliveredAt: originalShipment.deliveredAt,
+        });
+        return true;
+      },
+    });
+
+    const activityId = this.activityService.logActivity(
+      ActivityType.SHIPMENT_DELIVERED,
+      `Inbound shipment ${shipment.shipmentNumber} received - stock updated`,
+      shipment.id,
+      'shipment',
+      { previousStatus: originalShipment.status, movementType: 'inbound' },
+      shipment.companyId
+    );
+
+    if (activityId) {
+      ctx.addRollback({
+        description: `Remove delivery activity log`,
+        execute: () => this.activityService.removeActivity(activityId),
+      });
+    }
+
+    return { success: true, data: updatedShipment! };
+  }
+
+  /**
+   * Handles outbound cancellation with reservation release
    */
   private handleCancellation(
     ctx: TransactionContext,
     shipment: Shipment,
     originalShipment: Shipment
   ): TransactionResult<Shipment> {
-    // Release reservations for all items
     for (const item of shipment.items) {
       const released = this.reservationService.cancelReservation(
         item.inventoryItemId,
@@ -327,9 +425,7 @@ export class ShipmentService {
 
       if (!released) {
         console.warn(`Warning: Could not release reservation for ${item.inventoryItemName}`);
-        // Continue anyway for cancellation - best effort
       } else {
-        // Register rollback: re-reserve the inventory
         ctx.addRollback({
           description: `Re-reserve inventory for ${item.inventoryItemName}`,
           execute: () => this.reservationService.createReservation(
@@ -342,10 +438,8 @@ export class ShipmentService {
       }
     }
 
-    // Update shipment status
     const updatedShipment = this.shipmentRepo.updateStatus(shipment.id, 'cancelled');
 
-    // Register rollback for shipment status
     ctx.addRollback({
       description: `Restore shipment to ${originalShipment.status}`,
       execute: () => {
@@ -354,13 +448,49 @@ export class ShipmentService {
       },
     });
 
-    // Log activity
     const activityId = this.activityService.logActivity(
       ActivityType.SHIPMENT_CANCELLED,
-      `Shipment ${shipment.shipmentNumber} cancelled - inventory released`,
+      `Outbound shipment ${shipment.shipmentNumber} cancelled - inventory released`,
       shipment.id,
       'shipment',
-      { previousStatus: originalShipment.status },
+      { previousStatus: originalShipment.status, movementType: 'outbound' },
+      shipment.companyId
+    );
+
+    if (activityId) {
+      ctx.addRollback({
+        description: `Remove cancellation activity log`,
+        execute: () => this.activityService.removeActivity(activityId),
+      });
+    }
+
+    return { success: true, data: updatedShipment! };
+  }
+
+  /**
+   * Handles inbound cancellation - no inventory changes needed
+   */
+  private handleInboundCancellation(
+    ctx: TransactionContext,
+    shipment: Shipment,
+    originalShipment: Shipment
+  ): TransactionResult<Shipment> {
+    const updatedShipment = this.shipmentRepo.updateStatus(shipment.id, 'cancelled');
+
+    ctx.addRollback({
+      description: `Restore shipment to ${originalShipment.status}`,
+      execute: () => {
+        this.shipmentRepo.update(shipment.id, { status: originalShipment.status });
+        return true;
+      },
+    });
+
+    const activityId = this.activityService.logActivity(
+      ActivityType.SHIPMENT_CANCELLED,
+      `Inbound shipment ${shipment.shipmentNumber} cancelled`,
+      shipment.id,
+      'shipment',
+      { previousStatus: originalShipment.status, movementType: 'inbound' },
       shipment.companyId
     );
 
@@ -385,10 +515,8 @@ export class ShipmentService {
   ): TransactionResult<Shipment> {
     const originalShipment = { ...shipment };
 
-    // Update shipment status
     const updatedShipment = this.shipmentRepo.updateStatus(shipment.id, newStatus);
 
-    // Register rollback
     ctx.addRollback({
       description: `Restore shipment to ${previousStatus}`,
       execute: () => {
@@ -397,13 +525,12 @@ export class ShipmentService {
       },
     });
 
-    // Log activity
     const activityId = this.activityService.logActivity(
       ActivityType.SHIPMENT_UPDATED,
       `Shipment ${shipment.shipmentNumber} status updated to ${newStatus}`,
       shipment.id,
       'shipment',
-      { previousStatus },
+      { previousStatus, movementType: shipment.movementType },
       shipment.companyId
     );
 

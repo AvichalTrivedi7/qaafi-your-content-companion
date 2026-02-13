@@ -12,6 +12,7 @@ function toDomainModel(row: any): Shipment {
     customerName: row.customer_name,
     destination: row.destination,
     status: row.status as ShipmentStatus,
+    movementType: (row.movement_type || 'outbound') as any,
     items: (row.items || []) as ShipmentItem[],
     proofOfDelivery: row.proof_of_delivery || undefined,
     companyId: row.company_id,
@@ -29,6 +30,7 @@ function toDbRow(shipment: Shipment): any {
     customer_name: shipment.customerName,
     destination: shipment.destination,
     status: shipment.status,
+    movement_type: shipment.movementType,
     items: shipment.items,
     proof_of_delivery: shipment.proofOfDelivery,
     company_id: shipment.companyId,
@@ -120,6 +122,7 @@ export class SupabaseShipmentRepository implements IShipmentRepository {
     if (updates.customerName !== undefined) dbUpdates.customer_name = updates.customerName;
     if (updates.destination !== undefined) dbUpdates.destination = updates.destination;
     if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if (updates.movementType !== undefined) dbUpdates.movement_type = updates.movementType;
     if (updates.items !== undefined) dbUpdates.items = updates.items;
     if (updates.proofOfDelivery !== undefined) dbUpdates.proof_of_delivery = updates.proofOfDelivery;
     if (updates.deliveredAt !== undefined) dbUpdates.delivered_at = updates.deliveredAt?.toISOString();

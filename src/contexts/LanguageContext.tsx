@@ -126,6 +126,21 @@ const translations: Translations = {
   'shipments.deleteConfirmDescription': { en: 'Are you sure you want to delete this shipment? This will release any reserved inventory.', hi: 'क्या आप वाकई इस शिपमेंट को हटाना चाहते हैं? यह किसी भी आरक्षित इन्वेंटरी को जारी करेगा।' },
   'shipments.shipmentDeleted': { en: 'Shipment deleted successfully', hi: 'शिपमेंट सफलतापूर्वक हटाया गया' },
   
+  // Movement Types
+  'shipments.movementType': { en: 'Movement Type', hi: 'मूवमेंट प्रकार' },
+  'shipments.inbound': { en: 'Inbound (Stock In)', hi: 'इनबाउंड (स्टॉक इन)' },
+  'shipments.outbound': { en: 'Outbound (Stock Out)', hi: 'आउटबाउंड (स्टॉक आउट)' },
+  'shipments.supplierName': { en: 'Supplier Name', hi: 'सप्लायर का नाम' },
+  'shipments.enterSupplierName': { en: 'Enter supplier name', hi: 'सप्लायर का नाम दर्ज करें' },
+  'shipments.sourceLocation': { en: 'Source Location', hi: 'स्रोत स्थान' },
+  'shipments.receivedAt': { en: 'Received', hi: 'प्राप्त किया गया' },
+  
+  // Dashboard Movement
+  'dashboard.monthlyMovement': { en: 'Monthly Movement', hi: 'मासिक गतिविधि' },
+  'dashboard.totalInbound': { en: 'Total Inbound', hi: 'कुल इनबाउंड' },
+  'dashboard.totalOutbound': { en: 'Total Outbound', hi: 'कुल आउटबाउंड' },
+  'dashboard.netMovement': { en: 'Net Movement', hi: 'शुद्ध गतिविधि' },
+  
   // Common
   'common.save': { en: 'Save', hi: 'सेव करें' },
   'common.cancel': { en: 'Cancel', hi: 'रद्द करें' },

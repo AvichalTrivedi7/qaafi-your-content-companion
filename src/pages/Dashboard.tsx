@@ -6,7 +6,9 @@ import {
   Clock,
   CheckCircle2,
   ArrowUpCircle,
-  ArrowDownCircle
+  ArrowDownCircle,
+  ArrowDownToLine,
+  ArrowUpFromLine,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,9 +24,9 @@ const Dashboard = () => {
   const { t } = useLanguage();
   const { profile } = useAuth();
   
-  // Scope all stats to the user's company
   const companyId = profile?.companyId ?? undefined;
   const stats = dashboardService.getStats(companyId);
+  const monthlyMovement = shipmentService.getMonthlyMovementStats(companyId);
   const activeShipments = [...shipmentService.getShipmentsByStatus('pending', companyId), ...shipmentService.getShipmentsByStatus('in_transit', companyId)].slice(0, 3);
 
   return (
@@ -66,6 +68,46 @@ const Dashboard = () => {
           variant={stats.inventory.lowStockCount > 0 ? 'warning' : 'default'}
         />
       </div>
+
+      {/* Monthly Movement Stats */}
+      <Card className="mb-6 border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">{t('dashboard.monthlyMovement')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-success/5">
+              <div className="p-2 rounded-lg bg-success/10">
+                <ArrowDownToLine className="h-5 w-5 text-success" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-foreground">{monthlyMovement.inboundCount}</p>
+                <p className="text-xs text-muted-foreground">{t('dashboard.totalInbound')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-info/5">
+              <div className="p-2 rounded-lg bg-info/10">
+                <ArrowUpFromLine className="h-5 w-5 text-info" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-foreground">{monthlyMovement.outboundCount}</p>
+                <p className="text-xs text-muted-foreground">{t('dashboard.totalOutbound')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <TrendingUp className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className={`text-xl font-bold ${monthlyMovement.netMovement >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  {monthlyMovement.netMovement >= 0 ? '+' : ''}{monthlyMovement.netMovement}
+                </p>
+                <p className="text-xs text-muted-foreground">{t('dashboard.netMovement')}</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Today's Movement */}
       <Card className="mb-6 border-border">
