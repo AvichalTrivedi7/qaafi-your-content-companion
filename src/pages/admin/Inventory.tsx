@@ -15,7 +15,10 @@ import {
   ArrowDownToLine, 
   ArrowUpFromLine,
   AlertTriangle,
-  Building2
+  Building2,
+  MoreHorizontal,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,8 +46,24 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -69,6 +88,8 @@ const AdminInventory = () => {
   const [newProductSku, setNewProductSku] = useState('');
   const [newProductUnit, setNewProductUnit] = useState<InventoryUnit>('pieces');
   const [newProductLowStockThreshold, setNewProductLowStockThreshold] = useState('10');
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null);
 
   // Redirect if user doesn't have inventory access
   useEffect(() => {
@@ -189,6 +210,17 @@ const AdminInventory = () => {
     });
   };
 
+  const handleDeleteProduct = () => {
+    if (!deleteTarget) return;
+    const success = inventoryService.deleteItem(deleteTarget.id, deleteTarget.companyId || '');
+    if (success) {
+      setInventory(inventoryService.getAllItems());
+      toast({ title: t('inventory.productDeleted') });
+    }
+    setIsDeleteConfirmOpen(false);
+    setDeleteTarget(null);
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -305,6 +337,25 @@ const AdminInventory = () => {
                           >
                             <ArrowUpFromLine className="h-4 w-4 text-warning" />
                           </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  setDeleteTarget(item);
+                                  setIsDeleteConfirmOpen(true);
+                                }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {t('common.delete')}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -430,6 +481,27 @@ const AdminInventory = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('common.confirmDelete')}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t('inventory.deleteConfirmMessage')} "{deleteTarget?.name}"?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteProduct}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {t('common.delete')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
     </AdminLayout>
   );
 };
