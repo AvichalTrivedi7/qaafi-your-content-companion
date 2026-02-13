@@ -24,6 +24,7 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Shipment, ShipmentStatus, InventoryItem } from '@/domain/models';
 import { shipmentService } from '@/services/shipmentService';
+import { ShipmentStatusStepper } from './ShipmentStatusStepper';
 
 interface ShipmentDetailDrawerProps {
   shipment: Shipment | null;
@@ -151,6 +152,9 @@ export const ShipmentDetailDrawer = ({
         </DrawerHeader>
 
         <div className="p-6 space-y-6 overflow-y-auto">
+          {/* Status Stepper */}
+          <ShipmentStatusStepper currentStatus={shipment.status} movementType={shipment.movementType} />
+
           {/* Status */}
           <div className="space-y-2">
             <Label className="text-muted-foreground">{t('shipments.status')}</Label>
