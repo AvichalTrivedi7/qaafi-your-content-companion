@@ -142,6 +142,7 @@ export const mockShipments: Shipment[] = [
     customerName: 'Sharma Textiles',
     destination: 'Mumbai, Maharashtra',
     status: 'delivered',
+    movementType: 'outbound',
     items: [
       { inventoryItemId: 'inv-001', inventoryItemName: 'Cotton Fabric Roll', quantity: 50 },
     ],
@@ -157,6 +158,7 @@ export const mockShipments: Shipment[] = [
     customerName: 'Gupta Garments',
     destination: 'Delhi, NCR',
     status: 'in_transit',
+    movementType: 'outbound',
     items: [
       { inventoryItemId: 'inv-002', inventoryItemName: 'Silk Fabric Roll', quantity: 20 },
       { inventoryItemId: 'inv-003', inventoryItemName: 'Denim Fabric Roll', quantity: 30 },
@@ -171,6 +173,7 @@ export const mockShipments: Shipment[] = [
     customerName: 'Patel Fashions',
     destination: 'Ahmedabad, Gujarat',
     status: 'pending',
+    movementType: 'outbound',
     items: [
       { inventoryItemId: 'inv-004', inventoryItemName: 'Linen Fabric Roll', quantity: 15 },
     ],
@@ -184,6 +187,7 @@ export const mockShipments: Shipment[] = [
     customerName: 'Singh Enterprises',
     destination: 'Ludhiana, Punjab',
     status: 'pending',
+    movementType: 'outbound',
     items: [
       { inventoryItemId: 'inv-005', inventoryItemName: 'Polyester Fabric Roll', quantity: 100 },
     ],

@@ -237,6 +237,7 @@ export type Database = {
           destination: string
           id: string
           items: Json
+          movement_type: Database["public"]["Enums"]["movement_type"]
           proof_of_delivery: string | null
           shipment_number: string
           status: Database["public"]["Enums"]["shipment_status"]
@@ -250,6 +251,7 @@ export type Database = {
           destination: string
           id?: string
           items?: Json
+          movement_type?: Database["public"]["Enums"]["movement_type"]
           proof_of_delivery?: string | null
           shipment_number: string
           status?: Database["public"]["Enums"]["shipment_status"]
@@ -263,6 +265,7 @@ export type Database = {
           destination?: string
           id?: string
           items?: Json
+          movement_type?: Database["public"]["Enums"]["movement_type"]
           proof_of_delivery?: string | null
           shipment_number?: string
           status?: Database["public"]["Enums"]["shipment_status"]
@@ -340,6 +343,7 @@ export type Database = {
         | "pending"
         | "wholesaler"
       company_type: "supplier" | "wholesaler" | "retailer" | "manufacturer"
+      movement_type: "inbound" | "outbound"
       reference_type: "inventory" | "shipment" | "reservation"
       reservation_status: "active" | "fulfilled" | "cancelled"
       shipment_status: "pending" | "in_transit" | "delivered" | "cancelled"
@@ -491,6 +495,7 @@ export const Constants = {
         "wholesaler",
       ],
       company_type: ["supplier", "wholesaler", "retailer", "manufacturer"],
+      movement_type: ["inbound", "outbound"],
       reference_type: ["inventory", "shipment", "reservation"],
       reservation_status: ["active", "fulfilled", "cancelled"],
       shipment_status: ["pending", "in_transit", "delivered", "cancelled"],

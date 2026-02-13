@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Package, Calendar, Clock, Pencil, X, Save } from 'lucide-react';
+import { MapPin, Package, Calendar, Clock, Pencil, X, Save, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Drawer,
@@ -56,12 +56,10 @@ export const ShipmentDetailDrawer = ({
   const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
   
-  // Edit form state
   const [editDestination, setEditDestination] = useState('');
   const [editCustomerName, setEditCustomerName] = useState('');
   const [editStatus, setEditStatus] = useState<ShipmentStatus>('pending');
 
-  // Reset edit state when shipment changes or drawer closes
   useEffect(() => {
     if (shipment) {
       setEditDestination(shipment.destination);
@@ -75,28 +73,28 @@ export const ShipmentDetailDrawer = ({
 
   const config = statusConfig[shipment.status];
   const canEdit = shipment.status !== 'delivered' && shipment.status !== 'cancelled';
+  const isInbound = shipment.movementType === 'inbound';
+
+  // Dynamic labels based on movement type
+  const customerLabel = isInbound ? t('shipments.supplierName') : t('shipments.customerName');
+  const destinationLabel = isInbound ? t('shipments.sourceLocation') : t('shipments.destination');
+  const deliveredLabel = isInbound ? t('shipments.receivedAt') : t('shipments.deliveredAt');
 
   const handleSave = () => {
     if (!shipment) return;
 
-    // Update status if changed
     if (editStatus !== shipment.status) {
       const result = shipmentService.updateStatus(shipment.id, editStatus, companyId);
       if (!result.success) {
-        return; // Status update failed, don't proceed
+        return;
       }
     }
-
-    // Note: Currently the shipment service doesn't have an updateDetails method
-    // For destination and customerName changes, we'd need to extend the service
-    // For now, we'll just handle status changes which is the main requirement
 
     setIsEditing(false);
     onUpdate();
   };
 
   const handleCancel = () => {
-    // Reset to original values
     setEditDestination(shipment.destination);
     setEditCustomerName(shipment.customerName);
     setEditStatus(shipment.status);
@@ -110,8 +108,23 @@ export const ShipmentDetailDrawer = ({
           <div className="flex items-center justify-between">
             <div>
               <DrawerTitle className="font-mono">{shipment.shipmentNumber}</DrawerTitle>
-              <DrawerDescription>
+              <DrawerDescription className="flex items-center gap-2">
                 {t('shipments.shipmentDetails')}
+                <Badge 
+                  variant="outline" 
+                  className={cn(
+                    'border text-xs ml-2',
+                    isInbound 
+                      ? 'bg-success/10 text-success border-success/20' 
+                      : 'bg-info/10 text-info border-info/20'
+                  )}
+                >
+                  {isInbound ? (
+                    <><ArrowDownToLine className="h-3 w-3 mr-1" />{t('shipments.inbound')}</>
+                  ) : (
+                    <><ArrowUpFromLine className="h-3 w-3 mr-1" />{t('shipments.outbound')}</>
+                  )}
+                </Badge>
               </DrawerDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -171,7 +184,7 @@ export const ShipmentDetailDrawer = ({
           {/* Customer Name / Destination */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label className="text-muted-foreground">{t('shipments.customerName')}</Label>
+              <Label className="text-muted-foreground">{customerLabel}</Label>
               {isEditing ? (
                 <Input
                   value={editCustomerName}
@@ -183,7 +196,7 @@ export const ShipmentDetailDrawer = ({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-muted-foreground">{t('shipments.destination')}</Label>
+              <Label className="text-muted-foreground">{destinationLabel}</Label>
               {isEditing ? (
                 <Input
                   value={editDestination}
@@ -250,7 +263,7 @@ export const ShipmentDetailDrawer = ({
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Clock className="h-4 w-4" />
-                  <span>{t('shipments.deliveredAt')}</span>
+                  <span>{deliveredLabel}</span>
                 </div>
                 <span className="font-medium">{shipment.deliveredAt.toLocaleString()}</span>
               </div>

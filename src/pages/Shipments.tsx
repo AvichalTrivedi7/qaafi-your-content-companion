@@ -4,6 +4,8 @@ import {
   Plus,
   Search,
   XCircle,
+  ArrowDownToLine,
+  ArrowUpFromLine,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,8 +24,15 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Shipment, ShipmentStatus, ShipmentItem, InventoryItem, InventoryUnit } from '@/domain/models';
+import { Shipment, ShipmentStatus, ShipmentItem, InventoryItem, InventoryUnit, MovementType } from '@/domain/models';
 import { shipmentService, inventoryService, companyService } from '@/services';
 
 const Shipments = () => {
@@ -31,32 +40,30 @@ const Shipments = () => {
   const { profile, refreshProfile } = useAuth();
   const companyId = profile?.companyId ?? undefined;
   
-  // Use services for data - trigger re-render with state
   const [refreshKey, setRefreshKey] = useState(0);
   const shipments = useMemo(() => shipmentService.getAllShipments(companyId), [companyId, refreshKey]);
-  // Only show non-deleted inventory items for the user's company
   const inventoryItems = useMemo(() => inventoryService.getAllItems(companyId), [companyId, refreshKey]);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<ShipmentStatus | 'all'>('all');
+  const [movementFilter, setMovementFilter] = useState<MovementType | 'all'>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   // Create shipment form state
+  const [newMovementType, setNewMovementType] = useState<MovementType>('outbound');
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newDestination, setNewDestination] = useState('');
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [itemQuantity, setItemQuantity] = useState('');
   const [shipmentItems, setShipmentItems] = useState<ShipmentItem[]>([]);
-  // Track newly created items that haven't been added to shipment yet
   const [pendingNewItems, setPendingNewItems] = useState<InventoryItem[]>([]);
 
   const refreshData = useCallback(() => {
     setRefreshKey(prev => prev + 1);
   }, []);
 
-  // Combine existing inventory with pending new items for the selector
   const availableInventoryItems = useMemo(() => {
     return [...inventoryItems, ...pendingNewItems];
   }, [inventoryItems, pendingNewItems]);
@@ -76,19 +83,17 @@ const Shipments = () => {
       shipment.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       shipment.destination.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || shipment.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesMovement = movementFilter === 'all' || shipment.movementType === movementFilter;
+    return matchesSearch && matchesStatus && matchesMovement;
   });
 
-  // Generate auto SKU for new products
   const generateSku = (name: string): string => {
     const prefix = name.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
     const timestamp = Date.now().toString(36).toUpperCase();
     return `${prefix}-${timestamp}`;
   };
 
-  // Handle creating a new inventory item on-the-fly
   const handleCreateNewProduct = (name: string, unit: InventoryUnit): InventoryItem | null => {
-    // Check for duplicate (case-insensitive) in existing inventory
     const existingItem = inventoryItems.find(
       (item) => item.name.toLowerCase() === name.toLowerCase()
     );
@@ -97,7 +102,6 @@ const Shipments = () => {
       return null;
     }
 
-    // Also check pending items
     const pendingItem = pendingNewItems.find(
       (item) => item.name.toLowerCase() === name.toLowerCase()
     );
@@ -106,7 +110,6 @@ const Shipments = () => {
       return null;
     }
 
-    // Create the new inventory item
     const newItem = inventoryService.createItem({
       sku: generateSku(name),
       name,
@@ -115,7 +118,6 @@ const Shipments = () => {
       companyId,
     });
 
-    // Track it as pending (will be added to shipment)
     setPendingNewItems((prev) => [...prev, newItem]);
     toast.success(t('shipments.productCreated'));
     refreshData();
@@ -129,19 +131,17 @@ const Shipments = () => {
     const qty = parseInt(itemQuantity);
     if (isNaN(qty) || qty <= 0) return;
 
-    // For existing items, validate stock availability
+    // For outbound: validate stock availability (skip for inbound)
     const isPendingNew = pendingNewItems.some((p) => p.id === selectedItem.id);
-    if (!isPendingNew && selectedItem.availableStock < qty) {
+    if (newMovementType === 'outbound' && !isPendingNew && selectedItem.availableStock < qty) {
       toast.error(`${t('error.insufficientStock')}: ${selectedItem.name} (${selectedItem.availableStock} ${selectedItem.unit} ${t('shipments.availableLabel')})`);
       return;
     }
 
-    // Check if item already added to shipment
     const existingIndex = shipmentItems.findIndex(item => item.inventoryItemId === selectedItem.id);
     if (existingIndex >= 0) {
-      // Update quantity - but validate total doesn't exceed available
       const newTotal = shipmentItems[existingIndex].quantity + qty;
-      if (!isPendingNew && selectedItem.availableStock < newTotal) {
+      if (newMovementType === 'outbound' && !isPendingNew && selectedItem.availableStock < newTotal) {
         toast.error(`${t('error.insufficientStock')}: ${selectedItem.name}`);
         return;
       }
@@ -159,10 +159,9 @@ const Shipments = () => {
       ]);
     }
 
-    // If this was a pending new item, stock in the quantity
-    if (isPendingNew) {
+    // For outbound: if pending new item, stock in the quantity first
+    if (newMovementType === 'outbound' && isPendingNew) {
       inventoryService.stockIn(selectedItem.id, qty, companyId);
-      // Remove from pending since it's now been added
       setPendingNewItems((prev) => prev.filter((p) => p.id !== selectedItem.id));
       refreshData();
     }
@@ -186,14 +185,13 @@ const Shipments = () => {
       newCustomerName,
       newDestination,
       shipmentItems,
-      companyId
+      companyId,
+      newMovementType
     );
 
     if (result.success && result.data) {
-      toast.success(`Shipment ${result.data.shipmentNumber} created`);
-      setNewCustomerName('');
-      setNewDestination('');
-      setShipmentItems([]);
+      toast.success(`${newMovementType === 'inbound' ? 'Inbound' : 'Outbound'} shipment ${result.data.shipmentNumber} created`);
+      resetCreateForm();
       setIsCreateOpen(false);
       refreshData();
     } else {
@@ -208,7 +206,6 @@ const Shipments = () => {
       toast.success(`Shipment updated to ${newStatus.replace('_', ' ')}`);
       refreshData();
       
-      // Update selected shipment if in detail view
       if (selectedShipment?.id === shipmentId) {
         setSelectedShipment(result.data);
       }
@@ -228,13 +225,13 @@ const Shipments = () => {
   };
 
   const openDetail = (shipment: Shipment) => {
-    // Get fresh data from service (scoped to company)
     const freshShipment = shipmentService.getShipmentById(shipment.id, companyId);
     setSelectedShipment(freshShipment || shipment);
     setIsDetailOpen(true);
   };
 
   const resetCreateForm = () => {
+    setNewMovementType('outbound');
     setNewCustomerName('');
     setNewDestination('');
     setShipmentItems([]);
@@ -242,6 +239,11 @@ const Shipments = () => {
     setItemQuantity('');
     setPendingNewItems([]);
   };
+
+  // Dynamic labels based on movement type
+  const customerLabel = newMovementType === 'inbound' ? t('shipments.supplierName') : t('shipments.customerName');
+  const customerPlaceholder = newMovementType === 'inbound' ? t('shipments.enterSupplierName') : t('shipments.enterCustomerName');
+  const destinationLabel = newMovementType === 'inbound' ? t('shipments.sourceLocation') : t('shipments.destination');
 
   return (
     <AppLayout>
@@ -266,19 +268,50 @@ const Shipments = () => {
               <DialogTitle>{t('shipments.createShipment')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-4">
+              {/* Movement Type Selector */}
               <div className="space-y-2">
-                <Label>{t('shipments.customerName')}</Label>
+                <Label>{t('shipments.movementType')}</Label>
+                <Select value={newMovementType} onValueChange={(v) => {
+                  setNewMovementType(v as MovementType);
+                  // Reset items when switching type
+                  setShipmentItems([]);
+                  setSelectedItem(null);
+                  setItemQuantity('');
+                  setPendingNewItems([]);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="inbound">
+                      <div className="flex items-center gap-2">
+                        <ArrowDownToLine className="h-4 w-4 text-success" />
+                        {t('shipments.inbound')}
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="outbound">
+                      <div className="flex items-center gap-2">
+                        <ArrowUpFromLine className="h-4 w-4 text-info" />
+                        {t('shipments.outbound')}
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{customerLabel}</Label>
                 <Input
-                  placeholder={t('shipments.enterCustomerName')}
+                  placeholder={customerPlaceholder}
                   value={newCustomerName}
                   onChange={(e) => setNewCustomerName(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>{t('shipments.destination')}</Label>
+                <Label>{destinationLabel}</Label>
                 <Input
-                  placeholder={t('shipments.destination')}
+                  placeholder={destinationLabel}
                   value={newDestination}
                   onChange={(e) => setNewDestination(e.target.value)}
                 />
@@ -363,6 +396,13 @@ const Shipments = () => {
             className="pl-10"
           />
         </div>
+        <Tabs value={movementFilter} onValueChange={(v) => setMovementFilter(v as MovementType | 'all')} className="w-full sm:w-auto">
+          <TabsList className="grid grid-cols-3 w-full sm:w-auto">
+            <TabsTrigger value="all" className="text-xs">{t('shipments.all')}</TabsTrigger>
+            <TabsTrigger value="inbound" className="text-xs">{t('shipments.inbound')}</TabsTrigger>
+            <TabsTrigger value="outbound" className="text-xs">{t('shipments.outbound')}</TabsTrigger>
+          </TabsList>
+        </Tabs>
         <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as ShipmentStatus | 'all')} className="w-full sm:w-auto">
           <TabsList className="grid grid-cols-5 w-full sm:w-auto">
             <TabsTrigger value="all" className="text-xs">{t('shipments.all')}</TabsTrigger>

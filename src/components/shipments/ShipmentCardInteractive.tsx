@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, Truck, Package, MapPin, Clock, CheckCircle2, XCircle, Calendar } from 'lucide-react';
+import { Trash2, Truck, Package, MapPin, Clock, CheckCircle2, XCircle, Calendar, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -73,6 +73,7 @@ export const ShipmentCardInteractive = ({
 
   const config = statusConfig[shipment.status];
   const Icon = config.icon;
+  const isInbound = shipment.movementType === 'inbound';
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -126,9 +127,26 @@ export const ShipmentCardInteractive = ({
                     {shipment.customerName}
                   </p>
                 </div>
-                <Badge variant="outline" className={cn('border shrink-0', config.badgeClass)}>
-                  {t(`shipments.${config.label}`)}
-                </Badge>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <Badge variant="outline" className={cn('border', config.badgeClass)}>
+                    {t(`shipments.${config.label}`)}
+                  </Badge>
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      'border text-xs',
+                      isInbound 
+                        ? 'bg-success/10 text-success border-success/20' 
+                        : 'bg-info/10 text-info border-info/20'
+                    )}
+                  >
+                    {isInbound ? (
+                      <><ArrowDownToLine className="h-3 w-3 mr-1" />{t('shipments.inbound')}</>
+                    ) : (
+                      <><ArrowUpFromLine className="h-3 w-3 mr-1" />{t('shipments.outbound')}</>
+                    )}
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>

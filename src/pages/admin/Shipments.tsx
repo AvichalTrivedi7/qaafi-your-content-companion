@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { shipmentService } from '@/services/shipmentService';
 import { companyService } from '@/services/companyService';
 import { inventoryService } from '@/services/inventoryService';
-import { Shipment, ShipmentStatus, ShipmentItem, InventoryItem, InventoryUnit } from '@/domain/models';
+import { Shipment, ShipmentStatus, ShipmentItem, InventoryItem, InventoryUnit, MovementType } from '@/domain/models';
 import { ProductSelector, DEFAULT_LOW_STOCK_THRESHOLD } from '@/components/ProductSelector';
 import { ShipmentCardInteractive, ShipmentDetailDrawer } from '@/components/shipments';
 import { 
@@ -13,6 +13,8 @@ import {
   Plus, 
   Search, 
   XCircle,
+  ArrowDownToLine,
+  ArrowUpFromLine,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,6 +55,7 @@ const AdminShipments = () => {
   
   // Create shipment dialog state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newMovementType, setNewMovementType] = useState<MovementType>('outbound');
   const [newCustomerName, setNewCustomerName] = useState('');
   const [newDestination, setNewDestination] = useState('');
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
@@ -140,9 +143,8 @@ const AdminShipments = () => {
     const qty = parseInt(itemQuantity);
     if (isNaN(qty) || qty <= 0) return;
 
-    // For existing items, validate stock availability
     const isPendingNew = pendingNewItems.some((p) => p.id === selectedItem.id);
-    if (!isPendingNew && selectedItem.availableStock < qty) {
+    if (newMovementType === 'outbound' && !isPendingNew && selectedItem.availableStock < qty) {
       sonnerToast.error(`${t('error.insufficientStock')}: ${selectedItem.name} (${selectedItem.availableStock} ${selectedItem.unit} ${t('shipments.availableLabel')})`);
       return;
     }
@@ -152,7 +154,7 @@ const AdminShipments = () => {
     if (existingIndex >= 0) {
       // Update quantity - but validate total doesn't exceed available
       const newTotal = shipmentItems[existingIndex].quantity + qty;
-      if (!isPendingNew && selectedItem.availableStock < newTotal) {
+      if (newMovementType === 'outbound' && !isPendingNew && selectedItem.availableStock < newTotal) {
         sonnerToast.error(`${t('error.insufficientStock')}: ${selectedItem.name}`);
         return;
       }
@@ -170,10 +172,8 @@ const AdminShipments = () => {
       ]);
     }
 
-    // If this was a pending new item, stock in the quantity
-    if (isPendingNew) {
+    if (newMovementType === 'outbound' && isPendingNew) {
       inventoryService.stockIn(selectedItem.id, qty, companyId);
-      // Remove from pending since it's now been added
       setPendingNewItems((prev) => prev.filter((p) => p.id !== selectedItem.id));
       refreshData();
     }
@@ -197,7 +197,8 @@ const AdminShipments = () => {
       newCustomerName,
       newDestination,
       shipmentItems,
-      companyId
+      companyId,
+      newMovementType
     );
 
     if (result.success && result.data) {
@@ -227,6 +228,7 @@ const AdminShipments = () => {
   };
 
   const resetCreateForm = () => {
+    setNewMovementType('outbound');
     setNewCustomerName('');
     setNewDestination('');
     setShipmentItems([]);
@@ -234,6 +236,10 @@ const AdminShipments = () => {
     setItemQuantity('');
     setPendingNewItems([]);
   };
+
+  const customerLabel = newMovementType === 'inbound' ? t('shipments.supplierName') : t('shipments.customerName');
+  const customerPlaceholder = newMovementType === 'inbound' ? t('shipments.enterSupplierName') : t('shipments.enterCustomerName');
+  const destinationLabel = newMovementType === 'inbound' ? t('shipments.sourceLocation') : t('shipments.destination');
 
   return (
     <AdminLayout>
@@ -262,19 +268,49 @@ const AdminShipments = () => {
                   <DialogTitle>{t('shipments.createShipment')}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 pt-4">
+                  {/* Movement Type Selector */}
                   <div className="space-y-2">
-                    <Label>{t('shipments.customerName')}</Label>
+                    <Label>{t('shipments.movementType')}</Label>
+                    <Select value={newMovementType} onValueChange={(v) => {
+                      setNewMovementType(v as MovementType);
+                      setShipmentItems([]);
+                      setSelectedItem(null);
+                      setItemQuantity('');
+                      setPendingNewItems([]);
+                    }}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="inbound">
+                          <div className="flex items-center gap-2">
+                            <ArrowDownToLine className="h-4 w-4 text-success" />
+                            {t('shipments.inbound')}
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="outbound">
+                          <div className="flex items-center gap-2">
+                            <ArrowUpFromLine className="h-4 w-4 text-info" />
+                            {t('shipments.outbound')}
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{customerLabel}</Label>
                     <Input
-                      placeholder={t('shipments.enterCustomerName')}
+                      placeholder={customerPlaceholder}
                       value={newCustomerName}
                       onChange={(e) => setNewCustomerName(e.target.value)}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label>{t('shipments.destination')}</Label>
+                    <Label>{destinationLabel}</Label>
                     <Input
-                      placeholder={t('shipments.destination')}
+                      placeholder={destinationLabel}
                       value={newDestination}
                       onChange={(e) => setNewDestination(e.target.value)}
                     />
