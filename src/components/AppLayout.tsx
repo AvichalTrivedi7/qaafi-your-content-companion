@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { Button } from '@/components/ui/button';
+import kaafiLogo from '@/assets/kaafi_logo.png';
 
 interface NavItemProps {
   to: string;
@@ -68,7 +69,8 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
           >
             {isMobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
-          <span className="text-xl font-bold text-sidebar-primary">{t('app.name')}</span>
+           <img src={kaafiLogo} alt="Qaafi" className="h-6 w-auto" />
+           <span className="text-xl font-bold text-sidebar-primary">{t('app.name')}</span>
         </div>
         <LanguageToggle />
       </header>
@@ -86,7 +88,10 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
         )}>
           {!isCollapsed && (
             <div>
-              <h1 className="text-xl font-bold text-sidebar-primary">{t('app.name')}</h1>
+              <div className="flex items-center gap-2">
+                <img src={kaafiLogo} alt="Qaafi" className="h-6 w-auto" />
+                <h1 className="text-xl font-bold text-sidebar-primary">{t('app.name')}</h1>
+              </div>
               <p className="text-xs text-sidebar-foreground/60">{t('app.tagline')}</p>
             </div>
           )}
