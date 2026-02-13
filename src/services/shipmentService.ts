@@ -115,7 +115,7 @@ export class ShipmentService {
       }
 
       // Generate shipment ID first so we can use it for reservations
-      const shipmentId = `ship-${Date.now()}`;
+      const shipmentId = crypto.randomUUID();
       const shipmentCount = this.shipmentRepo.findAll().length;
       const shipmentNumber = `SHP-${new Date().getFullYear()}-${String(shipmentCount + 1).padStart(3, '0')}`;
       // Create reservations for all items with rollback tracking
