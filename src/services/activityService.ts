@@ -48,7 +48,7 @@ export class ActivityService {
     companyId?: string
   ): string {
     const newLog: ActivityLog = {
-      id: `act-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: crypto.randomUUID(),
       type,
       description,
       referenceId,

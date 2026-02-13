@@ -68,7 +68,7 @@ export class ReservationService {
     if (!success) return false;
 
     const newReservation: Reservation = {
-      id: `res-${Date.now()}-${inventoryItemId}`,
+      id: crypto.randomUUID(),
       inventoryItemId,
       shipmentId,
       quantity,
