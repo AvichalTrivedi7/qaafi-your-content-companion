@@ -64,6 +64,7 @@ import { cn } from '@/lib/utils';
 import { InventoryItem, ActivityType, INVENTORY_UNITS, InventoryUnit } from '@/domain/models';
 import { inventoryService } from '@/services/inventoryService';
 import { activityService } from '@/services/activityService';
+import { inventoryNameSchema, inventorySkuSchema, validateField } from '@/lib/validation';
 
 type StockFilter = 'all' | 'low' | 'out';
 
@@ -131,10 +132,10 @@ const Inventory = () => {
   });
 
   const handleAddProduct = () => {
-    if (!newProductName.trim() || !newProductSku.trim()) {
-      toast.error(t('inventory.fillAllFields'));
-      return;
-    }
+    const nameErr = validateField(inventoryNameSchema, newProductName);
+    if (nameErr) { toast.error(nameErr); return; }
+    const skuErr = validateField(inventorySkuSchema, newProductSku);
+    if (skuErr) { toast.error(skuErr); return; }
 
     // Check for duplicate SKU
     const existingSku = inventoryService.getItemBySku(newProductSku.trim(), companyId);
@@ -161,7 +162,9 @@ const Inventory = () => {
   };
 
   const handleEditProduct = () => {
-    if (!selectedProduct || !editProductName.trim()) return;
+    if (!selectedProduct) return;
+    const nameErr = validateField(inventoryNameSchema, editProductName);
+    if (nameErr) { toast.error(nameErr); return; }
 
     const updated = inventoryService.updateItem(
       selectedProduct.id,
@@ -286,6 +289,7 @@ const Inventory = () => {
                   placeholder={t('inventory.productName')}
                   value={newProductName}
                   onChange={(e) => setNewProductName(e.target.value)}
+                  maxLength={200}
                 />
               </div>
               <div className="space-y-2">
@@ -294,6 +298,7 @@ const Inventory = () => {
                   placeholder={t('inventory.enterSku')}
                   value={newProductSku}
                   onChange={(e) => setNewProductSku(e.target.value)}
+                  maxLength={50}
                 />
               </div>
               <div className="space-y-2">

@@ -34,6 +34,7 @@ import {
 import { toast } from 'sonner';
 import { Shipment, ShipmentStatus, ShipmentItem, InventoryItem, InventoryUnit, MovementType } from '@/domain/models';
 import { shipmentService, inventoryService, companyService } from '@/services';
+import { customerNameSchema, destinationSchema, validateField } from '@/lib/validation';
 
 const Shipments = () => {
   const { t } = useLanguage();
@@ -175,7 +176,11 @@ const Shipments = () => {
   };
 
   const handleCreateShipment = () => {
-    if (!newCustomerName.trim() || !newDestination.trim() || shipmentItems.length === 0) return;
+    const nameErr = validateField(customerNameSchema, newCustomerName);
+    if (nameErr) { toast.error(nameErr); return; }
+    const destErr = validateField(destinationSchema, newDestination);
+    if (destErr) { toast.error(destErr); return; }
+    if (shipmentItems.length === 0) return;
     if (!companyId) {
       toast.error('No company associated with your account');
       return;
@@ -305,6 +310,7 @@ const Shipments = () => {
                   placeholder={customerPlaceholder}
                   value={newCustomerName}
                   onChange={(e) => setNewCustomerName(e.target.value)}
+                  maxLength={200}
                 />
               </div>
 
@@ -314,6 +320,7 @@ const Shipments = () => {
                   placeholder={destinationLabel}
                   value={newDestination}
                   onChange={(e) => setNewDestination(e.target.value)}
+                  maxLength={500}
                 />
               </div>
 

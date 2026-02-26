@@ -8,6 +8,7 @@ import { Building2, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { companyNameSchema, validateField } from '@/lib/validation';
 
 interface CompanyOnboardingProps {
   onComplete: () => void;
@@ -19,16 +20,23 @@ export const CompanyOnboarding = ({ onComplete }: CompanyOnboardingProps) => {
   const [companyName, setCompanyName] = useState('');
   const [companyType, setCompanyType] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const handleCreateCompany = async () => {
-    if (!companyName.trim() || !companyType) {
+    const error = validateField(companyNameSchema, companyName);
+    if (error) {
+      setNameError(error);
+      return;
+    }
+    if (!companyType) {
       toast({
         title: 'Missing information',
-        description: 'Please enter a company name and select a type.',
+        description: 'Please select a company type.',
         variant: 'destructive',
       });
       return;
     }
+    setNameError(null);
 
     setIsLoading(true);
     try {
@@ -77,9 +85,16 @@ export const CompanyOnboarding = ({ onComplete }: CompanyOnboardingProps) => {
               id="companyName"
               placeholder="Enter your company name"
               value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
+              onChange={(e) => {
+                setCompanyName(e.target.value);
+                if (nameError) setNameError(null);
+              }}
               disabled={isLoading}
+              maxLength={100}
             />
+            {nameError && (
+              <p className="text-sm text-destructive">{nameError}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="companyType">Company Type</Label>
