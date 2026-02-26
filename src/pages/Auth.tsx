@@ -32,7 +32,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; companyName?: string }>({});
 
-  const companyNameSchema = z.string().trim().min(2, 'Company name must be at least 2 characters').max(100, 'Company name must be less than 100 characters').regex(/^[\p{L}\p{N}\s\-\.\,\&\(\)\/\#]+$/u, 'Company name contains invalid characters');
+  const companyNameSchema = z.string().trim().min(2, 'Company name must be at least 2 characters').max(100, 'Company name must be less than 100 characters').regex(/^[a-zA-Z0-9\u00C0-\u024F\u0600-\u06FF\s\-.,&()/#]+$/, 'Company name contains invalid characters');
 
   // Redirect if already authenticated with a company
   useEffect(() => {

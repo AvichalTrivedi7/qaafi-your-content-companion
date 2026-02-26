@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // Shared regex: allows letters (any script), digits, spaces, hyphens, dots, ampersands, commas
-const safeTextRegex = /^[\p{L}\p{N}\s\-\.\,\&\(\)\/\#]+$/u;
+const safeTextRegex = /^[a-zA-Z0-9\u00C0-\u024F\u0600-\u06FF\s\-.,&()/#]+$/;
 
 export const companyNameSchema = z
   .string()
