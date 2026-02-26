@@ -1,40 +1,21 @@
 
 
-## Fix Critical Security Issue: Anonymous Data Access
+## Fix Build Errors
 
-### Problem
-All database tables are accessible to unauthenticated (anonymous) users. Anyone with the public API key can query all tables and read email addresses, customer data, company access codes, inventory details, and business information without logging in.
+There are two issues in the build logs:
 
-### Solution
-Add explicit RLS deny policies for the `anon` role on all 7 tables, blocking any unauthenticated access.
+### 1. CSS @import Order (Active Issue)
+The `@import` for Google Fonts on line 6 of `src/index.css` must come **before** the `@tailwind` directives (lines 1-3). CSS requires `@import` statements to precede all other statements.
 
-### Database Migration
+**Fix:** Move the `@import url(...)` line to the very top of `src/index.css`, above `@tailwind base;`.
 
-A single migration will add `FOR ALL TO anon USING (false) WITH CHECK (false)` policies on:
+### 2. Invalid Regex (Stale Issue)
+The build log references `\p{L}` Unicode regex, but this pattern no longer exists in the codebase -- it was already fixed in a prior edit. This error appears to be from a cached/stale build. Moving the CSS `@import` and triggering a fresh build should clear it.
 
-1. `profiles` - blocks access to user emails
-2. `companies` - blocks access to company data and access codes
-3. `inventory_items` - blocks access to product/stock data
-4. `shipments` - blocks access to customer names and shipment details
-5. `activity_logs` - blocks access to business activity history
-6. `reservations` - blocks access to reservation data
-7. `user_roles` - blocks access to role assignments
+### Changes
 
-### Technical Details
+**File: `src/index.css`**
+- Move line 6 (`@import url('https://fonts.googleapis.com/...')`) to line 1, before the `@tailwind` directives.
 
-```sql
-CREATE POLICY "Block anonymous access" ON public.profiles FOR ALL TO anon USING (false) WITH CHECK (false);
-CREATE POLICY "Block anonymous access" ON public.companies FOR ALL TO anon USING (false) WITH CHECK (false);
-CREATE POLICY "Block anonymous access" ON public.inventory_items FOR ALL TO anon USING (false) WITH CHECK (false);
-CREATE POLICY "Block anonymous access" ON public.shipments FOR ALL TO anon USING (false) WITH CHECK (false);
-CREATE POLICY "Block anonymous access" ON public.activity_logs FOR ALL TO anon USING (false) WITH CHECK (false);
-CREATE POLICY "Block anonymous access" ON public.reservations FOR ALL TO anon USING (false) WITH CHECK (false);
-CREATE POLICY "Block anonymous access" ON public.user_roles FOR ALL TO anon USING (false) WITH CHECK (false);
-```
-
-### What Won't Change
-- No code changes needed -- this is database-only
-- Authenticated user access remains unchanged
-- All existing RLS policies for authenticated users stay intact
-- No impact on application functionality
+No other files need changes.
 
