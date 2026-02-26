@@ -67,6 +67,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { inventoryNameSchema, inventorySkuSchema, validateField } from '@/lib/validation';
 
 const AdminInventory = () => {
   const { t } = useLanguage();
@@ -168,7 +169,10 @@ const AdminInventory = () => {
   };
 
   const handleAddProduct = () => {
-    if (!newProductName.trim() || !newProductSku.trim()) return;
+    const nameErr = validateField(inventoryNameSchema, newProductName);
+    if (nameErr) { toast({ title: nameErr, variant: 'destructive' }); return; }
+    const skuErr = validateField(inventorySkuSchema, newProductSku);
+    if (skuErr) { toast({ title: skuErr, variant: 'destructive' }); return; }
     
     // Get the user's company ID from AuthContext
     const userCompanyId = profile?.companyId;
@@ -431,6 +435,7 @@ const AdminInventory = () => {
                   value={newProductName}
                   onChange={(e) => setNewProductName(e.target.value)}
                   placeholder={t('inventory.enterProductName')}
+                  maxLength={200}
                 />
               </div>
               
@@ -440,6 +445,7 @@ const AdminInventory = () => {
                   value={newProductSku}
                   onChange={(e) => setNewProductSku(e.target.value)}
                   placeholder={t('inventory.enterSku')}
+                  maxLength={50}
                 />
               </div>
               

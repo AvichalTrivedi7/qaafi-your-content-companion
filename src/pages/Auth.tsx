@@ -32,6 +32,8 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; companyName?: string }>({});
 
+  const companyNameSchema = z.string().trim().min(2, 'Company name must be at least 2 characters').max(100, 'Company name must be less than 100 characters').regex(/^[\p{L}\p{N}\s\-\.\,\&\(\)\/\#]+$/u, 'Company name contains invalid characters');
+
   // Redirect if already authenticated with a company
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -152,8 +154,9 @@ const Auth = () => {
   const handleCreateCompany = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!companyName.trim()) {
-      setErrors({ companyName: 'Company name is required' });
+    const nameResult = companyNameSchema.safeParse(companyName);
+    if (!nameResult.success) {
+      setErrors({ companyName: nameResult.error.errors[0].message });
       return;
     }
     
