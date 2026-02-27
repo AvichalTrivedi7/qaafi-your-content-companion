@@ -23,7 +23,7 @@ const Auth = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: authLoading, profile } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, profile, refreshProfile } = useAuth();
   
   const [step, setStep] = useState<AuthStep>('auth');
   const [email, setEmail] = useState('');
@@ -169,6 +169,9 @@ const Auth = () => {
       });
       
       if (error) throw error;
+      
+      // Refresh profile to get updated companyId before navigating
+      await refreshProfile();
       
       toast({
         title: 'Company created!',
