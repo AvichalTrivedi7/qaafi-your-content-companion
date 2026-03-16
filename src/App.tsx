@@ -18,6 +18,11 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AdminInventory from "./pages/admin/Inventory";
 import AdminShipments from "./pages/admin/Shipments";
 
+// Negotiation & Orders
+import Negotiations from "./pages/Negotiations";
+import NegotiationSession from "./pages/NegotiationSession";
+import Orders from "./pages/Orders";
+
 // Admin-only pages (hidden routes)
 import AdminSystemDashboard from "./pages/admin/SystemDashboard";
 import AdminCompaniesView from "./pages/admin/CompaniesView";
@@ -43,6 +48,9 @@ const App = () => (
                 <Route path="/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
                 <Route path="/dashboard/inventory" element={<ProtectedRoute><AdminInventory /></ProtectedRoute>} />
                 <Route path="/dashboard/shipments" element={<ProtectedRoute><AdminShipments /></ProtectedRoute>} />
+                <Route path="/dashboard/negotiations" element={<ProtectedRoute><Negotiations /></ProtectedRoute>} />
+                <Route path="/dashboard/negotiations/:id" element={<ProtectedRoute><NegotiationSession /></ProtectedRoute>} />
+                <Route path="/dashboard/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
                 
                 {/* Hidden Admin Routes - system overview only, no business data management */}
                 <Route path="/__internal__/admin" element={<AdminRoute><AdminSystemDashboard /></AdminRoute>} />

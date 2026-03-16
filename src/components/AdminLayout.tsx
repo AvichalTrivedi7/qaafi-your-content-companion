@@ -10,7 +10,9 @@ import {
   ChevronLeft,
   LogOut,
   Users,
-  Activity
+  Activity,
+  Handshake,
+  ShoppingCart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
