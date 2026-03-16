@@ -138,6 +138,214 @@ export type Database = {
           },
         ]
       }
+      negotiation_offers: {
+        Row: {
+          action: Database["public"]["Enums"]["offer_action"]
+          created_at: string
+          id: string
+          message: string | null
+          negotiation_id: string
+          offered_by: string
+          offered_by_company_id: string
+          price: number | null
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["offer_action"]
+          created_at?: string
+          id?: string
+          message?: string | null
+          negotiation_id: string
+          offered_by: string
+          offered_by_company_id: string
+          price?: number | null
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["offer_action"]
+          created_at?: string
+          id?: string
+          message?: string | null
+          negotiation_id?: string
+          offered_by?: string
+          offered_by_company_id?: string
+          price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_offers_negotiation_id_fkey"
+            columns: ["negotiation_id"]
+            isOneToOne: false
+            referencedRelation: "negotiations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_offers_offered_by_company_id_fkey"
+            columns: ["offered_by_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      negotiations: {
+        Row: {
+          accepted_at: string | null
+          accepted_price: number | null
+          buyer_company_id: string
+          created_at: string
+          current_offer_by: string | null
+          current_offer_expires_at: string | null
+          current_offer_price: number | null
+          id: string
+          max_price: number
+          min_price: number
+          offer_expiry_minutes: number
+          rfq_id: string
+          seller_company_id: string
+          status: Database["public"]["Enums"]["negotiation_status"]
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_price?: number | null
+          buyer_company_id: string
+          created_at?: string
+          current_offer_by?: string | null
+          current_offer_expires_at?: string | null
+          current_offer_price?: number | null
+          id?: string
+          max_price: number
+          min_price: number
+          offer_expiry_minutes?: number
+          rfq_id: string
+          seller_company_id: string
+          status?: Database["public"]["Enums"]["negotiation_status"]
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_price?: number | null
+          buyer_company_id?: string
+          created_at?: string
+          current_offer_by?: string | null
+          current_offer_expires_at?: string | null
+          current_offer_price?: number | null
+          id?: string
+          max_price?: number
+          min_price?: number
+          offer_expiry_minutes?: number
+          rfq_id?: string
+          seller_company_id?: string
+          status?: Database["public"]["Enums"]["negotiation_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiations_buyer_company_id_fkey"
+            columns: ["buyer_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiations_rfq_id_fkey"
+            columns: ["rfq_id"]
+            isOneToOne: true
+            referencedRelation: "rfqs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiations_seller_company_id_fkey"
+            columns: ["seller_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          agreed_price: number
+          buyer_company_id: string
+          created_at: string
+          id: string
+          negotiation_id: string
+          product_name: string
+          quantity: number
+          rfq_id: string
+          seller_company_id: string
+          shipment_id: string | null
+          status: Database["public"]["Enums"]["order_status"]
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          agreed_price: number
+          buyer_company_id: string
+          created_at?: string
+          id?: string
+          negotiation_id: string
+          product_name: string
+          quantity: number
+          rfq_id: string
+          seller_company_id: string
+          shipment_id?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          unit: string
+          updated_at?: string
+        }
+        Update: {
+          agreed_price?: number
+          buyer_company_id?: string
+          created_at?: string
+          id?: string
+          negotiation_id?: string
+          product_name?: string
+          quantity?: number
+          rfq_id?: string
+          seller_company_id?: string
+          shipment_id?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_buyer_company_id_fkey"
+            columns: ["buyer_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_negotiation_id_fkey"
+            columns: ["negotiation_id"]
+            isOneToOne: true
+            referencedRelation: "negotiations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_rfq_id_fkey"
+            columns: ["rfq_id"]
+            isOneToOne: true
+            referencedRelation: "rfqs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_seller_company_id_fkey"
+            columns: ["seller_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company_id: string | null
@@ -228,6 +436,72 @@ export type Database = {
           },
         ]
       }
+      rfqs: {
+        Row: {
+          buyer_company_id: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          max_price: number
+          min_price: number
+          product_description: string | null
+          product_name: string
+          quantity: number
+          seller_company_id: string
+          status: Database["public"]["Enums"]["rfq_status"]
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          buyer_company_id: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          max_price: number
+          min_price: number
+          product_description?: string | null
+          product_name: string
+          quantity: number
+          seller_company_id: string
+          status?: Database["public"]["Enums"]["rfq_status"]
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          buyer_company_id?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          max_price?: number
+          min_price?: number
+          product_description?: string | null
+          product_name?: string
+          quantity?: number
+          seller_company_id?: string
+          status?: Database["public"]["Enums"]["rfq_status"]
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfqs_buyer_company_id_fkey"
+            columns: ["buyer_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfqs_seller_company_id_fkey"
+            columns: ["seller_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shipments: {
         Row: {
           company_id: string
@@ -307,6 +581,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_negotiation: { Args: { _negotiation_id: string }; Returns: string }
       create_and_assign_company: {
         Args: {
           company_name: string
@@ -335,6 +610,13 @@ export type Database = {
         | "RESERVATION_RELEASED"
         | "INVENTORY_UPDATED"
         | "COMPANY_CREATED"
+        | "NEGOTIATION_STARTED"
+        | "OFFER_MADE"
+        | "OFFER_COUNTERED"
+        | "OFFER_ACCEPTED"
+        | "OFFER_REJECTED"
+        | "OFFER_EXPIRED"
+        | "ORDER_CREATED"
       app_role:
         | "admin"
         | "user"
@@ -344,8 +626,29 @@ export type Database = {
         | "wholesaler"
       company_type: "supplier" | "wholesaler" | "retailer" | "manufacturer"
       movement_type: "inbound" | "outbound"
-      reference_type: "inventory" | "shipment" | "reservation"
+      negotiation_status:
+        | "open"
+        | "offer_made"
+        | "counter_offered"
+        | "accepted"
+        | "expired"
+        | "rejected"
+      offer_action: "initial_offer" | "counter_offer" | "accept" | "reject"
+      order_status:
+        | "confirmed"
+        | "in_production"
+        | "shipped"
+        | "delivered"
+        | "cancelled"
+      reference_type:
+        | "inventory"
+        | "shipment"
+        | "reservation"
+        | "negotiation"
+        | "order"
+        | "rfq"
       reservation_status: "active" | "fulfilled" | "cancelled"
+      rfq_status: "open" | "negotiating" | "accepted" | "expired" | "cancelled"
       shipment_status: "pending" | "in_transit" | "delivered" | "cancelled"
     }
     CompositeTypes: {
@@ -485,6 +788,13 @@ export const Constants = {
         "RESERVATION_RELEASED",
         "INVENTORY_UPDATED",
         "COMPANY_CREATED",
+        "NEGOTIATION_STARTED",
+        "OFFER_MADE",
+        "OFFER_COUNTERED",
+        "OFFER_ACCEPTED",
+        "OFFER_REJECTED",
+        "OFFER_EXPIRED",
+        "ORDER_CREATED",
       ],
       app_role: [
         "admin",
@@ -496,8 +806,32 @@ export const Constants = {
       ],
       company_type: ["supplier", "wholesaler", "retailer", "manufacturer"],
       movement_type: ["inbound", "outbound"],
-      reference_type: ["inventory", "shipment", "reservation"],
+      negotiation_status: [
+        "open",
+        "offer_made",
+        "counter_offered",
+        "accepted",
+        "expired",
+        "rejected",
+      ],
+      offer_action: ["initial_offer", "counter_offer", "accept", "reject"],
+      order_status: [
+        "confirmed",
+        "in_production",
+        "shipped",
+        "delivered",
+        "cancelled",
+      ],
+      reference_type: [
+        "inventory",
+        "shipment",
+        "reservation",
+        "negotiation",
+        "order",
+        "rfq",
+      ],
       reservation_status: ["active", "fulfilled", "cancelled"],
+      rfq_status: ["open", "negotiating", "accepted", "expired", "cancelled"],
       shipment_status: ["pending", "in_transit", "delivered", "cancelled"],
     },
   },

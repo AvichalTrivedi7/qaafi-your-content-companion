@@ -11,3 +11,6 @@ export { dashboardService } from './dashboardService';
 // Transaction support
 export { TransactionContext, executeTransaction, executeTransactionSync } from './transactionService';
 export type { RollbackAction, TransactionResult } from './transactionService';
+
+// Negotiation (Meter-Based Framework)
+export { negotiationService } from './negotiationService';
