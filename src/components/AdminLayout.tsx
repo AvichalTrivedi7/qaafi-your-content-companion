@@ -127,6 +127,20 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
       });
     }
     
+    // Negotiations & Orders - all non-admin users
+    if (!isAdmin) {
+      items.push({ 
+        to: '/dashboard/negotiations', 
+        icon: <Handshake className="h-5 w-5" />, 
+        label: 'Negotiations'
+      });
+      items.push({ 
+        to: '/dashboard/orders', 
+        icon: <ShoppingCart className="h-5 w-5" />, 
+        label: 'Orders'
+      });
+    }
+    
     return items;
   }, [canViewDashboard, canViewInventory, canViewShipments, isAdmin, t]);
 
