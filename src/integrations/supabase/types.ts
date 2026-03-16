@@ -610,6 +610,13 @@ export type Database = {
         | "RESERVATION_RELEASED"
         | "INVENTORY_UPDATED"
         | "COMPANY_CREATED"
+        | "NEGOTIATION_STARTED"
+        | "OFFER_MADE"
+        | "OFFER_COUNTERED"
+        | "OFFER_ACCEPTED"
+        | "OFFER_REJECTED"
+        | "OFFER_EXPIRED"
+        | "ORDER_CREATED"
       app_role:
         | "admin"
         | "user"
@@ -633,7 +640,13 @@ export type Database = {
         | "shipped"
         | "delivered"
         | "cancelled"
-      reference_type: "inventory" | "shipment" | "reservation"
+      reference_type:
+        | "inventory"
+        | "shipment"
+        | "reservation"
+        | "negotiation"
+        | "order"
+        | "rfq"
       reservation_status: "active" | "fulfilled" | "cancelled"
       rfq_status: "open" | "negotiating" | "accepted" | "expired" | "cancelled"
       shipment_status: "pending" | "in_transit" | "delivered" | "cancelled"
@@ -775,6 +788,13 @@ export const Constants = {
         "RESERVATION_RELEASED",
         "INVENTORY_UPDATED",
         "COMPANY_CREATED",
+        "NEGOTIATION_STARTED",
+        "OFFER_MADE",
+        "OFFER_COUNTERED",
+        "OFFER_ACCEPTED",
+        "OFFER_REJECTED",
+        "OFFER_EXPIRED",
+        "ORDER_CREATED",
       ],
       app_role: [
         "admin",
@@ -802,7 +822,14 @@ export const Constants = {
         "delivered",
         "cancelled",
       ],
-      reference_type: ["inventory", "shipment", "reservation"],
+      reference_type: [
+        "inventory",
+        "shipment",
+        "reservation",
+        "negotiation",
+        "order",
+        "rfq",
+      ],
       reservation_status: ["active", "fulfilled", "cancelled"],
       rfq_status: ["open", "negotiating", "accepted", "expired", "cancelled"],
       shipment_status: ["pending", "in_transit", "delivered", "cancelled"],
