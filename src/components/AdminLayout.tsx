@@ -10,7 +10,9 @@ import {
   ChevronLeft,
   LogOut,
   Users,
-  Activity
+  Activity,
+  Handshake,
+  ShoppingCart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -122,6 +124,20 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
         to: '/dashboard/shipments', 
         icon: <Truck className="h-5 w-5" />, 
         label: t('nav.shipments') 
+      });
+    }
+    
+    // Negotiations & Orders - all non-admin users
+    if (!isAdmin) {
+      items.push({ 
+        to: '/dashboard/negotiations', 
+        icon: <Handshake className="h-5 w-5" />, 
+        label: 'Negotiations'
+      });
+      items.push({ 
+        to: '/dashboard/orders', 
+        icon: <ShoppingCart className="h-5 w-5" />, 
+        label: 'Orders'
       });
     }
     
