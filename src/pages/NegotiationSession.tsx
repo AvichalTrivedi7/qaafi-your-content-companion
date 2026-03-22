@@ -169,10 +169,15 @@ const NegotiationSession = () => {
     }
   };
 
-  // Expiry countdown
+  // Expiry countdown (reactive via `now` state)
   const expiresAt = data.currentOfferExpiresAt;
-  const timeLeft = expiresAt ? Math.max(0, expiresAt.getTime() - Date.now()) : null;
-  const minutesLeft = timeLeft ? Math.ceil(timeLeft / 60000) : null;
+  const timeLeft = expiresAt ? Math.max(0, expiresAt.getTime() - now) : null;
+  const countdownLabel = useMemo(() => {
+    if (timeLeft === null || timeLeft <= 0) return null;
+    const mins = Math.floor(timeLeft / 60000);
+    const secs = Math.floor((timeLeft % 60000) / 1000);
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  }, [timeLeft]);
 
   return (
     <AdminLayout>
