@@ -72,6 +72,23 @@ const NegotiationSession = () => {
     return () => { unsubNeg(); unsubOffers(); };
   }, [id]);
 
+  // Client-side expiry countdown + lazy expiry check
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Check if offer expired client-side and trigger server expiry
+  useEffect(() => {
+    if (!data || !data.currentOfferExpiresAt) return;
+    const isActive = ['open', 'offer_made', 'counter_offered'].includes(data.status);
+    if (isActive && data.currentOfferExpiresAt.getTime() < Date.now()) {
+      // Trigger server-side expiry check
+      supabase.rpc('expire_negotiations').then(() => fetchData());
+    }
+  }, [now, data?.currentOfferExpiresAt, data?.status]);
+
   if (loading || !data) {
     return (
       <AdminLayout>
