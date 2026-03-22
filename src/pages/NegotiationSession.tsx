@@ -118,12 +118,11 @@ const NegotiationSession = () => {
     if (!id || !user || !companyId || offerPrice === null) return;
     setSubmitting(true);
     try {
-      await negotiationService.makeOffer({
+      const action = data.status === 'open' ? 'initial_offer' : 'counter_offer';
+      await negotiationService.submitOffer({
         negotiationId: id,
         price: offerPrice,
-        offeredBy: user.id,
-        offeredByCompanyId: companyId,
-        message: message || undefined,
+        action: action as 'initial_offer' | 'counter_offer',
       });
       setMessage('');
       toast({ title: 'Offer sent!' });
@@ -139,8 +138,8 @@ const NegotiationSession = () => {
     if (!id) return;
     setSubmitting(true);
     try {
-      const order = await negotiationService.acceptOffer(id);
-      toast({ title: 'Deal accepted!', description: `Order created: ₹${order.agreedPrice}` });
+      await negotiationService.submitOffer({ negotiationId: id, action: 'accept' });
+      toast({ title: 'Deal accepted!', description: `Price locked at ₹${data.currentOfferPrice?.toFixed(2)}` });
       fetchData();
     } catch (err: any) {
       toast({ title: 'Failed to accept', description: err.message, variant: 'destructive' });
@@ -150,17 +149,11 @@ const NegotiationSession = () => {
   };
 
   const handleReject = async () => {
-    if (!id || !user || !companyId) return;
+    if (!id) return;
     setSubmitting(true);
     try {
-      await negotiationService.rejectOffer({
-        negotiationId: id,
-        rejectedBy: user.id,
-        rejectedByCompanyId: companyId,
-        message: message || undefined,
-      });
+      await negotiationService.submitOffer({ negotiationId: id, action: 'reject' });
       toast({ title: 'Offer rejected' });
-      setMessage('');
       fetchData();
     } catch (err: any) {
       toast({ title: 'Failed', description: err.message, variant: 'destructive' });

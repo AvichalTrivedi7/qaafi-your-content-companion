@@ -178,89 +178,45 @@ class NegotiationService {
     return mapNegotiation(data);
   }
 
+  async submitOffer(params: {
+    negotiationId: string;
+    price?: number;
+    action: 'initial_offer' | 'counter_offer' | 'accept' | 'reject';
+  }): Promise<{ success: boolean; newStatus: string; price?: number }> {
+    const { data, error } = await supabase.rpc('submit_offer', {
+      _negotiation_id: params.negotiationId,
+      _offer_price: params.price ?? null,
+      _action: params.action,
+    } as any);
+
+    if (error) throw new Error(`Offer failed: ${error.message}`);
+    const result = data as any;
+    return { success: result.success, newStatus: result.new_status, price: result.price };
+  }
+
+  // Legacy wrappers kept for backward compatibility
   async makeOffer(params: {
     negotiationId: string;
     price: number;
     offeredBy: string;
     offeredByCompanyId: string;
     message?: string;
-  }): Promise<{ negotiation: Negotiation; offer: NegotiationOffer }> {
-    // Fetch current negotiation
-    const { data: neg, error: negError } = await supabase
-      .from('negotiations')
+  }) {
+    const neg = await this.getNegotiationWithDetails(params.negotiationId);
+    const action = neg.status === 'open' ? 'initial_offer' : 'counter_offer';
+    return this.submitOffer({ negotiationId: params.negotiationId, price: params.price, action });
+  }
+
+  async acceptOffer(negotiationId: string): Promise<Order> {
+    await this.submitOffer({ negotiationId, action: 'accept' });
+    // Fetch the created order
+    const { data: order, error } = await supabase
+      .from('orders')
       .select('*')
-      .eq('id', params.negotiationId)
+      .eq('negotiation_id', negotiationId)
       .single();
-
-    if (negError || !neg) throw new Error('Negotiation not found');
-
-    const currentStatus = neg.status as NegotiationStatus;
-
-    // Validate price within range
-    if (params.price < Number(neg.min_price) || params.price > Number(neg.max_price)) {
-      throw new Error(`Price must be between ${neg.min_price} and ${neg.max_price}`);
-    }
-
-    // Check offer hasn't expired
-    if (neg.current_offer_expires_at && new Date(neg.current_offer_expires_at) < new Date()) {
-      await supabase.from('negotiations').update({ status: 'expired' } as any).eq('id', params.negotiationId);
-      throw new Error('Current offer has expired');
-    }
-
-    // Determine new status based on state machine
-    let newStatus: NegotiationStatus;
-    if (currentStatus === 'open') {
-      newStatus = 'offer_made';
-    } else if (currentStatus === 'offer_made' || currentStatus === 'counter_offered') {
-      // Must be the other party
-      if (neg.current_offer_by && params.offeredBy === neg.current_offer_by) {
-        throw new Error('Cannot counter your own offer — wait for the other party');
-      }
-      newStatus = 'counter_offered';
-    } else {
-      throw new Error(`Cannot make offer: negotiation is in ${currentStatus} state`);
-    }
-
-    // Validate state transition
-    if (!VALID_NEGOTIATION_TRANSITIONS[currentStatus].includes(newStatus)) {
-      throw new Error(`Invalid state transition: ${currentStatus} → ${newStatus}`);
-    }
-
-    const expiresAt = new Date(Date.now() + neg.offer_expiry_minutes * 60 * 1000);
-
-    // Update negotiation
-    const { data: updated, error: updateError } = await supabase
-      .from('negotiations')
-      .update({
-        current_offer_price: params.price,
-        current_offer_by: params.offeredBy,
-        status: newStatus,
-        current_offer_expires_at: expiresAt.toISOString(),
-      } as any)
-      .eq('id', params.negotiationId)
-      .select()
-      .single();
-
-    if (updateError) throw new Error(`Failed to update negotiation: ${updateError.message}`);
-
-    // Create immutable audit log entry
-    const action = currentStatus === 'open' ? 'initial_offer' : 'counter_offer';
-    const { data: offer, error: offerError } = await supabase
-      .from('negotiation_offers')
-      .insert({
-        negotiation_id: params.negotiationId,
-        action,
-        price: params.price,
-        offered_by: params.offeredBy,
-        offered_by_company_id: params.offeredByCompanyId,
-        message: params.message,
-      } as any)
-      .select()
-      .single();
-
-    if (offerError) throw new Error(`Failed to log offer: ${offerError.message}`);
-
-    return { negotiation: mapNegotiation(updated), offer: mapOffer(offer) };
+    if (error) throw new Error(`Failed to fetch order: ${error.message}`);
+    return mapOrder(order);
   }
 
   async rejectOffer(params: {
@@ -268,67 +224,11 @@ class NegotiationService {
     rejectedBy: string;
     rejectedByCompanyId: string;
     message?: string;
-  }): Promise<Negotiation> {
-    const { data: neg, error } = await supabase
-      .from('negotiations')
-      .select('*')
-      .eq('id', params.negotiationId)
-      .single();
-
-    if (error || !neg) throw new Error('Negotiation not found');
-
-    if (neg.status !== 'offer_made' && neg.status !== 'counter_offered') {
-      throw new Error('Can only reject when there is an active offer');
-    }
-
-    // Cannot reject your own offer
-    if (neg.current_offer_by === params.rejectedBy) {
-      throw new Error('Cannot reject your own offer');
-    }
-
-    const { data: updated, error: updateError } = await supabase
-      .from('negotiations')
-      .update({ status: 'rejected' } as any)
-      .eq('id', params.negotiationId)
-      .select()
-      .single();
-
-    if (updateError) throw new Error(`Failed to reject: ${updateError.message}`);
-
-    // Audit log
-    await supabase.from('negotiation_offers').insert({
-      negotiation_id: params.negotiationId,
-      action: 'reject',
-      price: neg.current_offer_price,
-      offered_by: params.rejectedBy,
-      offered_by_company_id: params.rejectedByCompanyId,
-      message: params.message,
-    } as any);
-
-    // Update RFQ back to cancelled
-    await supabase.from('rfqs').update({ status: 'cancelled' } as any).eq('id', neg.rfq_id);
-
-    return mapNegotiation(updated);
+  }): Promise<void> {
+    await this.submitOffer({ negotiationId: params.negotiationId, action: 'reject' });
   }
 
-  async acceptOffer(negotiationId: string): Promise<Order> {
-    // Use the atomic server-side function
-    const { data, error } = await supabase.rpc('accept_negotiation', {
-      _negotiation_id: negotiationId,
-    });
-
-    if (error) throw new Error(`Failed to accept: ${error.message}`);
-
-    // Fetch the created order
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('id', data)
-      .single();
-
-    if (orderError) throw new Error(`Failed to fetch order: ${orderError.message}`);
-    return mapOrder(order);
-  }
+  // Old acceptOffer via accept_negotiation RPC removed — now handled by submitOffer
 
   // ------ Query Operations ------
 

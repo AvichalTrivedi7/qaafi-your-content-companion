@@ -598,6 +598,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      submit_offer: {
+        Args: {
+          _action?: string
+          _negotiation_id: string
+          _offer_price?: number
+        }
+        Returns: Json
+      }
     }
     Enums: {
       activity_type:
