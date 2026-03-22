@@ -589,6 +589,7 @@ export type Database = {
         }
         Returns: string
       }
+      expire_negotiations: { Args: never; Returns: string[] }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {

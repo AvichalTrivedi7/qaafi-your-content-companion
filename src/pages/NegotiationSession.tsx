@@ -1,6 +1,7 @@
 // NegotiationSession - Full real-time negotiation view with meter
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/AdminLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { negotiationService } from '@/services/negotiationService';
@@ -71,6 +72,23 @@ const NegotiationSession = () => {
     });
     return () => { unsubNeg(); unsubOffers(); };
   }, [id]);
+
+  // Client-side expiry countdown + lazy expiry check
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Check if offer expired client-side and trigger server expiry
+  useEffect(() => {
+    if (!data || !data.currentOfferExpiresAt) return;
+    const isActive = ['open', 'offer_made', 'counter_offered'].includes(data.status);
+    if (isActive && data.currentOfferExpiresAt.getTime() < Date.now()) {
+      // Trigger server-side expiry check
+      supabase.rpc('expire_negotiations').then(() => fetchData());
+    }
+  }, [now, data?.currentOfferExpiresAt, data?.status]);
 
   if (loading || !data) {
     return (
@@ -151,10 +169,14 @@ const NegotiationSession = () => {
     }
   };
 
-  // Expiry countdown
-  const expiresAt = data.currentOfferExpiresAt;
-  const timeLeft = expiresAt ? Math.max(0, expiresAt.getTime() - Date.now()) : null;
-  const minutesLeft = timeLeft ? Math.ceil(timeLeft / 60000) : null;
+  // Expiry countdown (reactive via `now` state)
+  const expiresAt = data?.currentOfferExpiresAt;
+  const timeLeft = expiresAt ? Math.max(0, expiresAt.getTime() - now) : null;
+  const countdownLabel = timeLeft !== null && timeLeft > 0
+    ? (Math.floor(timeLeft / 60000) > 0
+      ? `${Math.floor(timeLeft / 60000)}m ${Math.floor((timeLeft % 60000) / 1000)}s`
+      : `${Math.floor((timeLeft % 60000) / 1000)}s`)
+    : null;
 
   return (
     <AdminLayout>
@@ -200,10 +222,10 @@ const NegotiationSession = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 Price Meter
-                {minutesLeft !== null && minutesLeft > 0 && (
-                  <Badge variant="outline" className="ml-auto text-xs">
+                {countdownLabel && (
+                  <Badge variant="outline" className={cn("ml-auto text-xs", timeLeft && timeLeft < 60000 && "border-destructive text-destructive animate-pulse")}>
                     <Clock className="h-3 w-3 mr-1" />
-                    {minutesLeft}m left
+                    {countdownLabel} left
                   </Badge>
                 )}
               </CardTitle>
