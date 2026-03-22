@@ -190,7 +190,8 @@ class NegotiationService {
     } as any);
 
     if (error) throw new Error(`Offer failed: ${error.message}`);
-    return { success: data.success, newStatus: data.new_status, price: data.price };
+    const result = data as any;
+    return { success: result.success, newStatus: result.new_status, price: result.price };
   }
 
   // Legacy wrappers kept for backward compatibility
