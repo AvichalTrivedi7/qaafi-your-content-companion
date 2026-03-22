@@ -1,6 +1,7 @@
 // NegotiationSession - Full real-time negotiation view with meter
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/AdminLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { negotiationService } from '@/services/negotiationService';
