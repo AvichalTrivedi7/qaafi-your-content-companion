@@ -228,24 +228,7 @@ class NegotiationService {
     await this.submitOffer({ negotiationId: params.negotiationId, action: 'reject' });
   }
 
-  async acceptOffer(negotiationId: string): Promise<Order> {
-    // Use the atomic server-side function
-    const { data, error } = await supabase.rpc('accept_negotiation', {
-      _negotiation_id: negotiationId,
-    });
-
-    if (error) throw new Error(`Failed to accept: ${error.message}`);
-
-    // Fetch the created order
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('id', data)
-      .single();
-
-    if (orderError) throw new Error(`Failed to fetch order: ${orderError.message}`);
-    return mapOrder(order);
-  }
+  // Old acceptOffer via accept_negotiation RPC removed — now handled by submitOffer
 
   // ------ Query Operations ------
 
