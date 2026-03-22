@@ -223,10 +223,10 @@ const NegotiationSession = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 Price Meter
-                {minutesLeft !== null && minutesLeft > 0 && (
-                  <Badge variant="outline" className="ml-auto text-xs">
+                {countdownLabel && (
+                  <Badge variant="outline" className={cn("ml-auto text-xs", timeLeft && timeLeft < 60000 && "border-destructive text-destructive animate-pulse")}>
                     <Clock className="h-3 w-3 mr-1" />
-                    {minutesLeft}m left
+                    {countdownLabel} left
                   </Badge>
                 )}
               </CardTitle>
