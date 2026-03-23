@@ -147,35 +147,22 @@ class NegotiationService {
   // ------ Negotiation Operations ------
 
   async startNegotiation(rfqId: string): Promise<Negotiation> {
-    // Get the RFQ first
-    const { data: rfq, error: rfqError } = await supabase
-      .from('rfqs')
-      .select('*')
-      .eq('id', rfqId)
-      .single();
-
-    if (rfqError || !rfq) throw new Error('RFQ not found');
-    if (rfq.status !== 'open') throw new Error('RFQ is not open for negotiation');
-
-    // Create negotiation session
-    const { data, error } = await supabase
-      .from('negotiations')
-      .insert({
-        rfq_id: rfqId,
-        buyer_company_id: rfq.buyer_company_id,
-        seller_company_id: rfq.seller_company_id,
-        min_price: rfq.min_price,
-        max_price: rfq.max_price,
-      } as any)
-      .select()
-      .single();
+    // Use atomic RPC that handles meter locking + RFQ status + negotiation creation
+    const { data: negId, error } = await supabase.rpc('start_negotiation', {
+      _rfq_id: rfqId,
+    } as any);
 
     if (error) throw new Error(`Failed to start negotiation: ${error.message}`);
 
-    // Update RFQ status
-    await supabase.from('rfqs').update({ status: 'negotiating' } as any).eq('id', rfqId);
+    // Fetch the created negotiation
+    const { data: neg, error: fetchErr } = await supabase
+      .from('negotiations')
+      .select('*')
+      .eq('id', negId)
+      .single();
 
-    return mapNegotiation(data);
+    if (fetchErr || !neg) throw new Error('Failed to fetch created negotiation');
+    return mapNegotiation(neg);
   }
 
   async submitOffer(params: {
