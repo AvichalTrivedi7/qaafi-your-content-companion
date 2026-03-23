@@ -1,0 +1,1 @@
+CREATE INDEX idx_negotiations_expiry ON public.negotiations(current_offer_expires_at) WHERE status IN ('offer_made', 'counter_offered');
