@@ -1,0 +1,1 @@
+CREATE INDEX idx_negotiations_rfq_status ON public.negotiations (rfq_id, status);
