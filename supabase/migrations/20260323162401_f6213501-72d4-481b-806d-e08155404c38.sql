@@ -1,0 +1,1 @@
+CREATE INDEX idx_negotiations_offer_by ON public.negotiations(current_offer_by);
