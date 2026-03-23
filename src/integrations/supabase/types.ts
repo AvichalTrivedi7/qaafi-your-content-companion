@@ -443,11 +443,13 @@ export type Database = {
           created_by: string
           expires_at: string | null
           id: string
+          is_locked: boolean
           max_price: number
           min_price: number
           product_description: string | null
           product_name: string
           quantity: number
+          reserved_quantity: number
           seller_company_id: string
           status: Database["public"]["Enums"]["rfq_status"]
           unit: string
@@ -459,11 +461,13 @@ export type Database = {
           created_by: string
           expires_at?: string | null
           id?: string
+          is_locked?: boolean
           max_price: number
           min_price: number
           product_description?: string | null
           product_name: string
           quantity: number
+          reserved_quantity?: number
           seller_company_id: string
           status?: Database["public"]["Enums"]["rfq_status"]
           unit?: string
@@ -475,11 +479,13 @@ export type Database = {
           created_by?: string
           expires_at?: string | null
           id?: string
+          is_locked?: boolean
           max_price?: number
           min_price?: number
           product_description?: string | null
           product_name?: string
           quantity?: number
+          reserved_quantity?: number
           seller_company_id?: string
           status?: Database["public"]["Enums"]["rfq_status"]
           unit?: string
@@ -598,6 +604,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      start_negotiation: { Args: { _rfq_id: string }; Returns: string }
       submit_offer: {
         Args: {
           _action?: string
