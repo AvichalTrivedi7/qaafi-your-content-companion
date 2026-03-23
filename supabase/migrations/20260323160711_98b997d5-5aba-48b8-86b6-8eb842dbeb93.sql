@@ -1,0 +1,1 @@
+ALTER TABLE public.negotiations ALTER COLUMN negotiation_quantity DROP DEFAULT;

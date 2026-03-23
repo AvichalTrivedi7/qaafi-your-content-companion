@@ -216,7 +216,7 @@ export type Database = {
           id?: string
           max_price: number
           min_price: number
-          negotiation_quantity?: number
+          negotiation_quantity: number
           offer_expiry_minutes?: number
           rfq_id: string
           seller_company_id: string
