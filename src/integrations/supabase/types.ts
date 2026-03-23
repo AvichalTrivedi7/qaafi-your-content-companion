@@ -607,9 +607,10 @@ export type Database = {
         }
         Returns: boolean
       }
-      start_negotiation:
-        | { Args: { _rfq_id: string }; Returns: string }
-        | { Args: { _quantity?: number; _rfq_id: string }; Returns: string }
+      start_negotiation: {
+        Args: { _quantity?: number; _rfq_id: string }
+        Returns: string
+      }
       submit_offer: {
         Args: {
           _action?: string
