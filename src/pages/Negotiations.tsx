@@ -81,6 +81,62 @@ const Negotiations = () => {
     fetchData();
   }, [fetchData]);
 
+  // Realtime subscriptions for listing page
+  useEffect(() => {
+    if (!companyId) return;
+
+    // RFQ updates (status, reserved_quantity, is_locked)
+    const rfqChannel = supabase
+      .channel(`rfqs-list-${companyId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'rfqs' },
+        (payload) => {
+          const row = payload.new as any;
+          setRfqs(prev => prev.map(r => r.id === row.id ? {
+            ...r,
+            status: row.status,
+            minPrice: Number(row.min_price),
+            maxPrice: Number(row.max_price),
+          } : r));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'rfqs' },
+        () => fetchData()
+      )
+      .subscribe();
+
+    // Negotiation updates (status changes)
+    const negChannel = supabase
+      .channel(`negotiations-list-${companyId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'negotiations' },
+        (payload) => {
+          const row = payload.new as any;
+          setNegotiations(prev => prev.map(n => n.id === row.id ? {
+            ...n,
+            status: row.status,
+            currentOfferPrice: row.current_offer_price ? Number(row.current_offer_price) : undefined,
+            acceptedPrice: row.accepted_price ? Number(row.accepted_price) : undefined,
+          } : n));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'negotiations' },
+        () => fetchData()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(rfqChannel);
+      supabase.removeChannel(negChannel);
+    };
+  }, [companyId, fetchData]);
+
   const handleCreateRFQ = async () => {
     if (!companyId || !user) return;
     try {

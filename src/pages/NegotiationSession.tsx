@@ -60,18 +60,59 @@ const NegotiationSession = () => {
     fetchData();
   }, [fetchData]);
 
-  // Real-time subscriptions
+  // Real-time subscriptions (negotiations UPDATE, offers INSERT, rfqs UPDATE)
   useEffect(() => {
-    if (!id) return;
+    if (!id || !data?.rfqId) return;
+    const rfqId = data.rfqId;
+
+    // 1. Negotiation UPDATE — status, currentOfferPrice, expiry
     const unsubNeg = negotiationService.subscribeToNegotiation(id, (updated) => {
       setData(prev => prev ? { ...prev, ...updated } : null);
     });
+
+    // 2. Offers INSERT — new offer history entries
     const unsubOffers = negotiationService.subscribeToOffers(id, (newOffer) => {
-      setData(prev => prev ? { ...prev, offers: [...prev.offers, newOffer] } : null);
+      setData(prev => {
+        if (!prev) return null;
+        // Deduplicate by id
+        if (prev.offers.some(o => o.id === newOffer.id)) return prev;
+        return { ...prev, offers: [...prev.offers, newOffer] };
+      });
       setTimeout(() => offersEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     });
-    return () => { unsubNeg(); unsubOffers(); };
-  }, [id]);
+
+    // 3. RFQ UPDATE — reserved_quantity, is_locked changes
+    const rfqChannel = supabase
+      .channel(`rfq-${rfqId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'rfqs',
+          filter: `id=eq.${rfqId}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          setData(prev => prev ? {
+            ...prev,
+            rfq: {
+              ...prev.rfq,
+              status: row.status,
+              reservedQuantity: Number(row.reserved_quantity),
+              isLocked: row.is_locked,
+            },
+          } : null);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      unsubNeg();
+      unsubOffers();
+      supabase.removeChannel(rfqChannel);
+    };
+  }, [id, data?.rfqId]);
 
   // Client-side expiry countdown + lazy expiry check
   const [now, setNow] = useState(Date.now());
