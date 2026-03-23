@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Plus, FileText, Handshake, Clock, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
+import { Plus, FileText, Handshake, Clock, CheckCircle, XCircle, ArrowRight, Lock } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
   open: 'bg-info/10 text-info border-info/20',
