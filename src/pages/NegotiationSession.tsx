@@ -65,16 +65,41 @@ const NegotiationSession = () => {
     if (!id || !data?.rfqId) return;
     const rfqId = data.rfqId;
 
-    // 1. Negotiation UPDATE — status, currentOfferPrice, expiry
+    // 1. Negotiation UPDATE — status, currentOfferPrice, expiry + toast
     const unsubNeg = negotiationService.subscribeToNegotiation(id, (updated) => {
-      setData(prev => prev ? { ...prev, ...updated } : null);
+      setData(prev => {
+        if (!prev) return null;
+        const prevStatus = prev.status;
+        const newStatus = updated.status;
+        const isFromOther = updated.currentOfferBy !== companyId;
+
+        // Only toast on status transitions
+        if (newStatus !== prevStatus) {
+          if (newStatus === 'accepted') {
+            toast({ title: '🎉 Offer Accepted', description: `Price agreed at ₹${updated.acceptedPrice?.toFixed(2)}` });
+          } else if (newStatus === 'rejected') {
+            toast({ title: '❌ Offer Rejected', description: 'The negotiation has been rejected.', variant: 'destructive' });
+          } else if (newStatus === 'expired') {
+            toast({ title: '⏰ Offer Expired', description: 'The offer has expired.', variant: 'destructive' });
+          }
+        }
+        // Toast for new offer/counter from other party (status may not change for counter_offered→counter_offered)
+        if (isFromOther && updated.currentOfferPrice !== prev.currentOfferPrice) {
+          if (newStatus === 'offer_made' && prevStatus !== 'offer_made') {
+            toast({ title: '💰 New Offer Received', description: `₹${updated.currentOfferPrice?.toFixed(2)}` });
+          } else if (newStatus === 'counter_offered') {
+            toast({ title: '🔄 Counter Offer Received', description: `₹${updated.currentOfferPrice?.toFixed(2)}` });
+          }
+        }
+
+        return { ...prev, ...updated };
+      });
     });
 
     // 2. Offers INSERT — new offer history entries
     const unsubOffers = negotiationService.subscribeToOffers(id, (newOffer) => {
       setData(prev => {
         if (!prev) return null;
-        // Deduplicate by id
         if (prev.offers.some(o => o.id === newOffer.id)) return prev;
         return { ...prev, offers: [...prev.offers, newOffer] };
       });
