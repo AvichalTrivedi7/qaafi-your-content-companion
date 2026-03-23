@@ -98,6 +98,8 @@ const Negotiations = () => {
             status: row.status,
             minPrice: Number(row.min_price),
             maxPrice: Number(row.max_price),
+            reservedQuantity: Number(row.reserved_quantity ?? 0),
+            isLocked: row.is_locked ?? false,
           } : r));
         }
       )
