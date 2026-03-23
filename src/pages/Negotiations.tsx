@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Plus, FileText, Handshake, Clock, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
+import { Plus, FileText, Handshake, Clock, CheckCircle, XCircle, ArrowRight, Lock } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
   open: 'bg-info/10 text-info border-info/20',
@@ -98,6 +98,8 @@ const Negotiations = () => {
             status: row.status,
             minPrice: Number(row.min_price),
             maxPrice: Number(row.max_price),
+            reservedQuantity: Number(row.reserved_quantity ?? 0),
+            isLocked: row.is_locked ?? false,
           } : r));
         }
       )
@@ -276,18 +278,36 @@ const Negotiations = () => {
                   return (
                     <Card key={rfq.id} className="hover:shadow-md transition-shadow">
                       <CardContent className="py-4 flex items-center justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold">{rfq.productName}</span>
                             <Badge variant="outline" className={STATUS_COLORS[rfq.status]}>{rfq.status}</Badge>
                             <Badge variant="secondary" className="text-xs">{isBuyer ? 'Buyer' : 'Seller'}</Badge>
+                            {rfq.isLocked && (
+                              <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 gap-1">
+                                <Lock className="h-3 w-3" /> Locked
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {rfq.quantity} {rfq.unit} · ₹{rfq.minPrice.toFixed(2)} – ₹{rfq.maxPrice.toFixed(2)}
+                            ₹{rfq.minPrice.toFixed(2)} – ₹{rfq.maxPrice.toFixed(2)}
                           </p>
+                          {/* Meter availability */}
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className="text-foreground font-medium">{rfq.quantity}{rfq.unit} requested</span>
+                            <span className="text-warning">{rfq.reservedQuantity}{rfq.unit} reserved</span>
+                            <span className="text-success">{Math.max(0, rfq.quantity - rfq.reservedQuantity)}{rfq.unit} remaining</span>
+                          </div>
+                          {/* Meter bar */}
+                          <div className="h-1.5 w-full max-w-xs rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-warning transition-all duration-300"
+                              style={{ width: `${Math.min(100, (rfq.reservedQuantity / rfq.quantity) * 100)}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {rfq.status === 'open' && !hasNeg && !isBuyer && (
+                        <div className="flex items-center gap-2 ml-4 shrink-0">
+                          {rfq.status === 'open' && !hasNeg && !isBuyer && !rfq.isLocked && (
                             <Button size="sm" onClick={() => handleStartNegotiation(rfq.id)}>
                               Start Negotiation <ArrowRight className="h-4 w-4 ml-1" />
                             </Button>
