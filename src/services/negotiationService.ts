@@ -139,7 +139,6 @@ class NegotiationService {
     const { data, error } = await supabase
       .from('rfqs')
       .select('*')
-      .or(`buyer_company_id.eq.${companyId},seller_company_id.eq.${companyId}`)
       .order('created_at', { ascending: false });
 
     if (error) throw new Error(`Failed to fetch RFQs: ${error.message}`);
