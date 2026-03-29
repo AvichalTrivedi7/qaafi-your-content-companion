@@ -257,6 +257,10 @@ const Negotiations = () => {
   const buyingNegotiations = negotiations.filter(n => n.buyerCompanyId === companyId);
   const sellingNegotiations = negotiations.filter(n => n.sellerCompanyId === companyId);
 
+  // Split RFQs into marketplace (other companies' open RFQs) and my RFQs
+  const marketplaceRfqs = rfqs.filter(r => r.buyerCompanyId !== companyId && r.status === 'open');
+  const myRfqs = rfqs.filter(r => r.buyerCompanyId === companyId);
+
   return (
     <AdminLayout>
       <div className="space-y-6">
