@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Plus, FileText, Handshake, Clock, CheckCircle, XCircle, ArrowRight, Lock } from 'lucide-react';
+import { Plus, FileText, Handshake, Clock, CheckCircle, XCircle, ArrowRight, Lock, ShoppingCart, Store } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
   open: 'bg-info/10 text-info border-info/20',
@@ -29,10 +29,83 @@ const STATUS_COLORS: Record<string, string> = {
   rejected: 'bg-destructive/10 text-destructive border-destructive/20',
 };
 
+// Countdown helper
+function useNow(intervalMs = 1000) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(t);
+  }, [intervalMs]);
+  return now;
+}
+
+function formatCountdown(expiresAt?: Date, now?: number): string | null {
+  if (!expiresAt || !now) return null;
+  const diff = Math.max(0, expiresAt.getTime() - now);
+  if (diff <= 0) return 'Expired';
+  const m = Math.floor(diff / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+// Negotiation card used in both Buying and Selling tabs
+function NegotiationCard({ neg, role, now, onClick }: { neg: Negotiation; role: 'buyer' | 'seller'; now: number; onClick: () => void }) {
+  const isTerminal = ['accepted', 'expired', 'rejected'].includes(neg.status);
+  const countdown = !isTerminal ? formatCountdown(neg.currentOfferExpiresAt, now) : null;
+  const isUrgent = neg.currentOfferExpiresAt && !isTerminal && (neg.currentOfferExpiresAt.getTime() - now) < 60000;
+
+  return (
+    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={onClick}>
+      <CardContent className="py-4 flex items-center justify-between gap-4">
+        <div className="space-y-1.5 flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Handshake className="h-4 w-4 text-primary" />
+            <span className="font-semibold text-sm">Negotiation</span>
+            <Badge variant="outline" className={STATUS_COLORS[neg.status]}>{neg.status.replace('_', ' ')}</Badge>
+            <Badge variant="secondary" className="text-xs">{role === 'buyer' ? 'Buying' : 'Selling'}</Badge>
+          </div>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
+            <span>₹{neg.minPrice.toFixed(2)} – ₹{neg.maxPrice.toFixed(2)}</span>
+            {neg.currentOfferPrice && (
+              <span className="text-foreground font-medium">Current: ₹{neg.currentOfferPrice.toFixed(2)}</span>
+            )}
+            {neg.acceptedPrice && (
+              <span className="text-success font-medium">Agreed: ₹{neg.acceptedPrice.toFixed(2)}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <span>Qty: {Number(neg.negotiationQuantity ?? 0)}</span>
+            {countdown && (
+              <Badge variant="outline" className={`text-xs gap-1 ${isUrgent ? 'border-destructive text-destructive animate-pulse' : ''}`}>
+                <Clock className="h-3 w-3" />
+                {countdown}
+              </Badge>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {neg.status === 'accepted' ? (
+            <CheckCircle className="h-5 w-5 text-success" />
+          ) : neg.status === 'expired' ? (
+            <Clock className="h-5 w-5 text-muted-foreground" />
+          ) : neg.status === 'rejected' ? (
+            <XCircle className="h-5 w-5 text-destructive" />
+          ) : (
+            <Button size="sm" variant="outline">
+              Open Meter <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 const Negotiations = () => {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
   const companyId = profile?.companyId;
+  const now = useNow();
 
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
@@ -85,7 +158,6 @@ const Negotiations = () => {
   useEffect(() => {
     if (!companyId) return;
 
-    // RFQ updates (status, reserved_quantity, is_locked)
     const rfqChannel = supabase
       .channel(`rfqs-list-${companyId}`)
       .on(
@@ -110,7 +182,6 @@ const Negotiations = () => {
       )
       .subscribe();
 
-    // Negotiation updates (status changes)
     const negChannel = supabase
       .channel(`negotiations-list-${companyId}`)
       .on(
@@ -122,6 +193,8 @@ const Negotiations = () => {
             ...n,
             status: row.status,
             currentOfferPrice: row.current_offer_price ? Number(row.current_offer_price) : undefined,
+            currentOfferBy: row.current_offer_by,
+            currentOfferExpiresAt: row.current_offer_expires_at ? new Date(row.current_offer_expires_at) : undefined,
             acceptedPrice: row.accepted_price ? Number(row.accepted_price) : undefined,
           } : n));
         }
@@ -179,6 +252,10 @@ const Negotiations = () => {
 
   const isFormValid = form.sellerCompanyId && form.productName && form.quantity && form.minPrice && form.maxPrice &&
     parseFloat(form.maxPrice) > parseFloat(form.minPrice) && parseFloat(form.minPrice) > 0;
+
+  // Split negotiations into buying/selling
+  const buyingNegotiations = negotiations.filter(n => n.buyerCompanyId === companyId);
+  const sellingNegotiations = negotiations.filter(n => n.sellerCompanyId === companyId);
 
   return (
     <AdminLayout>
@@ -253,11 +330,11 @@ const Negotiations = () => {
           </Dialog>
         </div>
 
-        {/* Tabs: RFQs / Active Negotiations */}
+        {/* Main Tabs: RFQs / Negotiations */}
         <Tabs defaultValue="rfqs">
           <TabsList>
             <TabsTrigger value="rfqs" className="gap-2"><FileText className="h-4 w-4" />RFQs ({rfqs.length})</TabsTrigger>
-            <TabsTrigger value="active" className="gap-2"><Handshake className="h-4 w-4" />Negotiations ({negotiations.length})</TabsTrigger>
+            <TabsTrigger value="negotiations" className="gap-2"><Handshake className="h-4 w-4" />Negotiations ({negotiations.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="rfqs" className="mt-4">
@@ -292,13 +369,11 @@ const Negotiations = () => {
                           <p className="text-sm text-muted-foreground">
                             ₹{rfq.minPrice.toFixed(2)} – ₹{rfq.maxPrice.toFixed(2)}
                           </p>
-                          {/* Meter availability */}
                           <div className="flex items-center gap-3 text-xs">
                             <span className="text-foreground font-medium">{rfq.quantity}{rfq.unit} requested</span>
                             <span className="text-warning">{rfq.reservedQuantity}{rfq.unit} reserved</span>
                             <span className="text-success">{Math.max(0, rfq.quantity - rfq.reservedQuantity)}{rfq.unit} remaining</span>
                           </div>
-                          {/* Meter bar */}
                           <div className="h-1.5 w-full max-w-xs rounded-full bg-muted overflow-hidden">
                             <div
                               className="h-full rounded-full bg-warning transition-all duration-300"
@@ -329,56 +404,68 @@ const Negotiations = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="active" className="mt-4">
-            {loading ? (
-              <p className="text-muted-foreground text-center py-8">Loading...</p>
-            ) : negotiations.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Handshake className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                  <p className="text-muted-foreground">No active negotiations.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-3">
-                {negotiations.map(neg => {
-                  const isBuyer = neg.buyerCompanyId === companyId;
-                  const isTerminal = ['accepted', 'expired', 'rejected'].includes(neg.status);
-                  return (
-                    <Card key={neg.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/dashboard/negotiations/${neg.id}`)}>
-                      <CardContent className="py-4 flex items-center justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Handshake className="h-4 w-4 text-primary" />
-                            <span className="font-medium">Negotiation</span>
-                            <Badge variant="outline" className={STATUS_COLORS[neg.status]}>{neg.status.replace('_', ' ')}</Badge>
-                            <Badge variant="secondary" className="text-xs">{isBuyer ? 'Buyer' : 'Seller'}</Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            Range: ₹{neg.minPrice.toFixed(2)} – ₹{neg.maxPrice.toFixed(2)}
-                            {neg.currentOfferPrice && ` · Current: ₹${neg.currentOfferPrice.toFixed(2)}`}
-                            {neg.acceptedPrice && ` · Agreed: ₹${neg.acceptedPrice.toFixed(2)}`}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {neg.status === 'accepted' ? (
-                            <CheckCircle className="h-5 w-5 text-success" />
-                          ) : neg.status === 'expired' ? (
-                            <Clock className="h-5 w-5 text-muted-foreground" />
-                          ) : neg.status === 'rejected' ? (
-                            <XCircle className="h-5 w-5 text-destructive" />
-                          ) : (
-                            <Button size="sm" variant="outline">
-                              Open Meter <ArrowRight className="h-4 w-4 ml-1" />
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+          <TabsContent value="negotiations" className="mt-4">
+            {/* Buying / Selling sub-tabs */}
+            <Tabs defaultValue="buying">
+              <TabsList>
+                <TabsTrigger value="buying" className="gap-2">
+                  <ShoppingCart className="h-4 w-4" />Buying ({buyingNegotiations.length})
+                </TabsTrigger>
+                <TabsTrigger value="selling" className="gap-2">
+                  <Store className="h-4 w-4" />Selling ({sellingNegotiations.length})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="buying" className="mt-4">
+                {loading ? (
+                  <p className="text-muted-foreground text-center py-8">Loading...</p>
+                ) : buyingNegotiations.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+                      <p className="text-muted-foreground">No buying negotiations yet.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid gap-3">
+                    {buyingNegotiations.map(neg => (
+                      <NegotiationCard
+                        key={neg.id}
+                        neg={neg}
+                        role="buyer"
+                        now={now}
+                        onClick={() => navigate(`/dashboard/negotiations/${neg.id}`)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="selling" className="mt-4">
+                {loading ? (
+                  <p className="text-muted-foreground text-center py-8">Loading...</p>
+                ) : sellingNegotiations.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <Store className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+                      <p className="text-muted-foreground">No selling negotiations yet.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid gap-3">
+                    {sellingNegotiations.map(neg => (
+                      <NegotiationCard
+                        key={neg.id}
+                        neg={neg}
+                        role="seller"
+                        now={now}
+                        onClick={() => navigate(`/dashboard/negotiations/${neg.id}`)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         </Tabs>
       </div>
