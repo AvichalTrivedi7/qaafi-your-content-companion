@@ -52,6 +52,7 @@ function mapNegotiation(row: any): Negotiation {
     acceptedAt: row.accepted_at ? new Date(row.accepted_at) : undefined,
     offerExpiryMinutes: row.offer_expiry_minutes,
     currentOfferExpiresAt: row.current_offer_expires_at ? new Date(row.current_offer_expires_at) : undefined,
+    negotiationQuantity: Number(row.negotiation_quantity ?? 0),
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };

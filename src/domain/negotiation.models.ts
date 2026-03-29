@@ -63,6 +63,7 @@ export interface Negotiation {
   acceptedAt?: Date;
   offerExpiryMinutes: number;
   currentOfferExpiresAt?: Date;
+  negotiationQuantity: number;
   createdAt: Date;
   updatedAt: Date;
 }
