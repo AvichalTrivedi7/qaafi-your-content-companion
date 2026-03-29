@@ -257,6 +257,10 @@ const Negotiations = () => {
   const buyingNegotiations = negotiations.filter(n => n.buyerCompanyId === companyId);
   const sellingNegotiations = negotiations.filter(n => n.sellerCompanyId === companyId);
 
+  // Split RFQs into marketplace (other companies' open RFQs) and my RFQs
+  const marketplaceRfqs = rfqs.filter(r => r.buyerCompanyId !== companyId && r.status === 'open');
+  const myRfqs = rfqs.filter(r => r.buyerCompanyId === companyId);
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -338,70 +342,135 @@ const Negotiations = () => {
           </TabsList>
 
           <TabsContent value="rfqs" className="mt-4">
-            {loading ? (
-              <p className="text-muted-foreground text-center py-8">Loading...</p>
-            ) : rfqs.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <FileText className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                  <p className="text-muted-foreground">No RFQs yet. Create one to start negotiating prices.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-3">
-                {rfqs.map(rfq => {
-                  const hasNeg = negotiations.some(n => n.rfqId === rfq.id);
-                  const isBuyer = rfq.buyerCompanyId === companyId;
-                  return (
-                    <Card key={rfq.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="py-4 flex items-center justify-between">
-                        <div className="space-y-1.5 flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold">{rfq.productName}</span>
-                            <Badge variant="outline" className={STATUS_COLORS[rfq.status]}>{rfq.status}</Badge>
-                            <Badge variant="secondary" className="text-xs">{isBuyer ? 'Buyer' : 'Seller'}</Badge>
-                            {rfq.isLocked && (
-                              <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 gap-1">
-                                <Lock className="h-3 w-3" /> Locked
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            ₹{rfq.minPrice.toFixed(2)} – ₹{rfq.maxPrice.toFixed(2)}
-                          </p>
-                          <div className="flex items-center gap-3 text-xs">
-                            <span className="text-foreground font-medium">{rfq.quantity}{rfq.unit} requested</span>
-                            <span className="text-warning">{rfq.reservedQuantity}{rfq.unit} reserved</span>
-                            <span className="text-success">{Math.max(0, rfq.quantity - rfq.reservedQuantity)}{rfq.unit} remaining</span>
-                          </div>
-                          <div className="h-1.5 w-full max-w-xs rounded-full bg-muted overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-warning transition-all duration-300"
-                              style={{ width: `${Math.min(100, (rfq.reservedQuantity / rfq.quantity) * 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 ml-4 shrink-0">
-                          {rfq.status === 'open' && !hasNeg && !isBuyer && !rfq.isLocked && (
-                            <Button size="sm" onClick={() => handleStartNegotiation(rfq.id)}>
-                              Start Negotiation <ArrowRight className="h-4 w-4 ml-1" />
-                            </Button>
-                          )}
-                          {rfq.status === 'negotiating' && hasNeg && (
-                            <Button size="sm" variant="outline" onClick={() => openNegotiation(rfq.id)}>
-                              Open Meter <ArrowRight className="h-4 w-4 ml-1" />
-                            </Button>
-                          )}
-                          {rfq.status === 'accepted' && (
-                            <CheckCircle className="h-5 w-5 text-success" />
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
+            <Tabs defaultValue="marketplace">
+              <TabsList>
+                <TabsTrigger value="marketplace" className="gap-2">
+                  <Store className="h-4 w-4" />Marketplace ({marketplaceRfqs.length})
+                </TabsTrigger>
+                <TabsTrigger value="mine" className="gap-2">
+                  <FileText className="h-4 w-4" />My RFQs ({myRfqs.length})
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Marketplace: other companies' open RFQs */}
+              <TabsContent value="marketplace" className="mt-4">
+                {loading ? (
+                  <p className="text-muted-foreground text-center py-8">Loading...</p>
+                ) : marketplaceRfqs.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <Store className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+                      <p className="text-muted-foreground">No open RFQs in the marketplace right now.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid gap-3">
+                    {marketplaceRfqs.map(rfq => {
+                      const hasNeg = negotiations.some(n => n.rfqId === rfq.id);
+                      return (
+                        <Card key={rfq.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="py-4 flex items-center justify-between">
+                            <div className="space-y-1.5 flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold">{rfq.productName}</span>
+                                <Badge variant="outline" className={STATUS_COLORS[rfq.status]}>{rfq.status}</Badge>
+                                {rfq.isLocked && (
+                                  <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 gap-1">
+                                    <Lock className="h-3 w-3" /> Fully Reserved
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {rfq.quantity} {rfq.unit} · ₹{rfq.minPrice.toFixed(2)} – ₹{rfq.maxPrice.toFixed(2)}
+                              </p>
+                              <div className="flex items-center gap-3 text-xs">
+                                <span className="text-success font-medium">
+                                  {Math.max(0, rfq.quantity - rfq.reservedQuantity)} {rfq.unit} available
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 ml-4 shrink-0">
+                              {!hasNeg && !rfq.isLocked ? (
+                                <Button size="sm" onClick={() => handleStartNegotiation(rfq.id)}>
+                                  Negotiate <ArrowRight className="h-4 w-4 ml-1" />
+                                </Button>
+                              ) : hasNeg ? (
+                                <Button size="sm" variant="outline" onClick={() => openNegotiation(rfq.id)}>
+                                  Open Meter <ArrowRight className="h-4 w-4 ml-1" />
+                                </Button>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs">Fully Reserved</Badge>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* My RFQs: created by current company */}
+              <TabsContent value="mine" className="mt-4">
+                {loading ? (
+                  <p className="text-muted-foreground text-center py-8">Loading...</p>
+                ) : myRfqs.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <FileText className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+                      <p className="text-muted-foreground">You haven't created any RFQs yet.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid gap-3">
+                    {myRfqs.map(rfq => {
+                      const rfqNegs = negotiations.filter(n => n.rfqId === rfq.id);
+                      const activeNegs = rfqNegs.filter(n => !['accepted', 'expired', 'rejected'].includes(n.status));
+                      return (
+                        <Card key={rfq.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="py-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold">{rfq.productName}</span>
+                                <Badge variant="outline" className={STATUS_COLORS[rfq.status]}>{rfq.status}</Badge>
+                                {rfq.isLocked && (
+                                  <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 gap-1">
+                                    <Lock className="h-3 w-3" /> Locked
+                                  </Badge>
+                                )}
+                              </div>
+                              {rfq.status === 'accepted' && <CheckCircle className="h-5 w-5 text-success" />}
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              ₹{rfq.minPrice.toFixed(2)} – ₹{rfq.maxPrice.toFixed(2)}
+                            </p>
+                            {/* Meter availability */}
+                            <div className="flex items-center gap-3 text-xs mb-1">
+                              <span className="text-foreground font-medium">{rfq.quantity} {rfq.unit} requested</span>
+                              <span className="text-warning">{rfq.reservedQuantity} {rfq.unit} reserved</span>
+                              <span className="text-success">{Math.max(0, rfq.quantity - rfq.reservedQuantity)} {rfq.unit} remaining</span>
+                            </div>
+                            <div className="h-1.5 w-full max-w-xs rounded-full bg-muted overflow-hidden mb-2">
+                              <div
+                                className="h-full rounded-full bg-warning transition-all duration-300"
+                                style={{ width: `${Math.min(100, (rfq.reservedQuantity / rfq.quantity) * 100)}%` }}
+                              />
+                            </div>
+                            {/* Negotiation counts */}
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span>{rfqNegs.length} negotiation{rfqNegs.length !== 1 ? 's' : ''} total</span>
+                              {activeNegs.length > 0 && (
+                                <Badge variant="secondary" className="text-xs">{activeNegs.length} active</Badge>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           <TabsContent value="negotiations" className="mt-4">
