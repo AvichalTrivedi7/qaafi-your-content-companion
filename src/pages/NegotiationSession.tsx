@@ -73,8 +73,8 @@ const NegotiationSession = () => {
         const newStatus = updated.status;
         const isFromOther = updated.currentOfferBy !== user?.id;
 
-        // Only toast on status transitions
-        if (newStatus !== prevStatus) {
+        // Only toast for the OTHER party's actions
+        if (isFromOther && newStatus !== prevStatus) {
           if (newStatus === 'accepted') {
             toast({ title: '🎉 Offer Accepted', description: `Price agreed at ₹${updated.acceptedPrice?.toFixed(2)}` });
           } else if (newStatus === 'rejected') {
@@ -83,7 +83,7 @@ const NegotiationSession = () => {
             toast({ title: '⏰ Offer Expired', description: 'The offer has expired.', variant: 'destructive' });
           }
         }
-        // Toast for new offer/counter from other party (status may not change for counter_offered→counter_offered)
+        // Toast for new offer/counter from other party
         if (isFromOther && updated.currentOfferPrice !== prev.currentOfferPrice) {
           if (newStatus === 'offer_made' && prevStatus !== 'offer_made') {
             toast({ title: '💰 New Offer Received', description: `₹${updated.currentOfferPrice?.toFixed(2)}` });
