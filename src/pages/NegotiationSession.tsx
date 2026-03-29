@@ -71,7 +71,7 @@ const NegotiationSession = () => {
         if (!prev) return null;
         const prevStatus = prev.status;
         const newStatus = updated.status;
-        const isFromOther = updated.currentOfferBy !== companyId;
+        const isFromOther = updated.currentOfferBy !== user?.id;
 
         // Only toast on status transitions
         if (newStatus !== prevStatus) {
