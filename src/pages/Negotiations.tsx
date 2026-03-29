@@ -467,10 +467,6 @@ const Negotiations = () => {
                 )}
               </TabsContent>
             </Tabs>
-                  );
-                })}
-              </div>
-            )}
           </TabsContent>
 
           <TabsContent value="negotiations" className="mt-4">
