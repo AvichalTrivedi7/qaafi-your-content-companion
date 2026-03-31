@@ -361,14 +361,25 @@ const Negotiations = () => {
               </TabsList>
 
               {/* Marketplace: other companies' open RFQs */}
-              <TabsContent value="marketplace" className="mt-4">
+              <TabsContent value="marketplace" className="mt-4 space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search marketplace RFQs by product name..."
+                    value={marketplaceSearch}
+                    onChange={e => setMarketplaceSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
                 {loading ? (
                   <p className="text-muted-foreground text-center py-8">Loading...</p>
                 ) : marketplaceRfqs.length === 0 ? (
                   <Card>
                     <CardContent className="py-12 text-center">
                       <Store className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                      <p className="text-muted-foreground">No open RFQs in the marketplace right now.</p>
+                      <p className="text-muted-foreground">
+                        {marketplaceSearch ? 'No RFQs match your search.' : 'No open RFQs in the marketplace right now.'}
+                      </p>
                     </CardContent>
                   </Card>
                 ) : (
