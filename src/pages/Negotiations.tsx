@@ -52,7 +52,7 @@ function formatCountdown(expiresAt?: Date, now?: number): string | null {
 }
 
 // Negotiation card used in both Buying and Selling tabs
-function NegotiationCard({ neg, role, now, onClick }: { neg: Negotiation; role: 'buyer' | 'seller'; now: number; onClick: () => void }) {
+function NegotiationCard({ neg, role, now, onClick, sellerStats, sellerName }: { neg: Negotiation; role: 'buyer' | 'seller'; now: number; onClick: () => void; sellerStats?: { ordersCompleted: number; completionRate: number; avgRating: number; negotiationSuccessRate: number; avgResponseTimeMinutes: number; isBestSeller: boolean }; sellerName?: string }) {
   const isTerminal = ['accepted', 'expired', 'rejected'].includes(neg.status);
   const countdown = !isTerminal ? formatCountdown(neg.currentOfferExpiresAt, now) : null;
   const isUrgent = neg.currentOfferExpiresAt && !isTerminal && (neg.currentOfferExpiresAt.getTime() - now) < 60000;
@@ -66,7 +66,11 @@ function NegotiationCard({ neg, role, now, onClick }: { neg: Negotiation; role: 
             <span className="font-semibold text-sm">Negotiation</span>
             <Badge variant="outline" className={STATUS_COLORS[neg.status]}>{neg.status.replace('_', ' ')}</Badge>
             <Badge variant="secondary" className="text-xs">{role === 'buyer' ? 'Buying' : 'Selling'}</Badge>
+            {sellerStats && <BestSellerBadge stats={sellerStats} />}
           </div>
+          {sellerName && (
+            <p className="text-xs text-muted-foreground">Seller: {sellerName}</p>
+          )}
           <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
             <span>₹{neg.minPrice.toFixed(2)} – ₹{neg.maxPrice.toFixed(2)}</span>
             {neg.currentOfferPrice && (
