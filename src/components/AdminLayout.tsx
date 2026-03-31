@@ -28,13 +28,14 @@ interface NavItemProps {
   label: string;
   isActive: boolean;
   isCollapsed?: boolean;
+  badge?: number;
 }
 
-const NavItem = ({ to, icon, label, isActive, isCollapsed }: NavItemProps) => (
+const NavItem = ({ to, icon, label, isActive, isCollapsed, badge }: NavItemProps) => (
   <Link
     to={to}
     className={cn(
-      'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200',
+      'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 relative',
       'hover:bg-sidebar-accent',
       isActive 
         ? 'bg-sidebar-accent text-sidebar-primary font-medium' 
@@ -42,8 +43,24 @@ const NavItem = ({ to, icon, label, isActive, isCollapsed }: NavItemProps) => (
       isCollapsed && 'justify-center px-2'
     )}
   >
-    {icon}
-    {!isCollapsed && <span>{label}</span>}
+    <span className="relative">
+      {icon}
+      {isCollapsed && badge && badge > 0 ? (
+        <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      ) : null}
+    </span>
+    {!isCollapsed && (
+      <>
+        <span className="flex-1">{label}</span>
+        {badge && badge > 0 ? (
+          <span className="h-5 min-w-5 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        ) : null}
+      </>
+    )}
   </Link>
 );
 
