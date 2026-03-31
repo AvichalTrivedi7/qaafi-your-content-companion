@@ -162,7 +162,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
     }
     
     return items;
-  }, [canViewDashboard, canViewInventory, canViewShipments, isAdmin, t]);
+  }, [canViewDashboard, canViewInventory, canViewShipments, isAdmin, t, rfqBadgeCount, negotiationBadgeCount]);
 
   return (
     <div className="min-h-screen bg-background">
