@@ -431,6 +431,12 @@ const Negotiations = () => {
                                   </Badge>
                                 )}
                               </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span>Seller: {getCompanyName(rfq.sellerCompanyId)}</span>
+                                {sellerStatsMap[rfq.sellerCompanyId] && (
+                                  <BestSellerBadge stats={sellerStatsMap[rfq.sellerCompanyId]} />
+                                )}
+                              </div>
                               <p className="text-sm text-muted-foreground">
                                 {rfq.quantity} {rfq.unit} · ₹{rfq.minPrice.toFixed(2)} – ₹{rfq.maxPrice.toFixed(2)}
                               </p>
