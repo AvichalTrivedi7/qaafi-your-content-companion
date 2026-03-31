@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import { ProtectedRoute, AdminRoute } from "@/components/ProtectedRoute";
 
 // Pages
@@ -40,32 +41,34 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <Routes>
-                {/* Public Routes - Auth is the main entry point */}
-                <Route path="/" element={<Auth />} />
-                
-                {/* Protected Dashboard Routes - single dashboard, role-based UI */}
-                <Route path="/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-                <Route path="/dashboard/inventory" element={<ProtectedRoute><AdminInventory /></ProtectedRoute>} />
-                <Route path="/dashboard/shipments" element={<ProtectedRoute><AdminShipments /></ProtectedRoute>} />
-                <Route path="/dashboard/negotiations" element={<ProtectedRoute><Negotiations /></ProtectedRoute>} />
-                <Route path="/dashboard/negotiations/:id" element={<ProtectedRoute><NegotiationSession /></ProtectedRoute>} />
-                <Route path="/dashboard/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-                
-                {/* Hidden Admin Routes - system overview only, no business data management */}
-                <Route path="/__internal__/admin" element={<AdminRoute><AdminSystemDashboard /></AdminRoute>} />
-                <Route path="/__internal__/admin/companies" element={<AdminRoute><AdminCompaniesView /></AdminRoute>} />
-                <Route path="/__internal__/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
-                <Route path="/__internal__/admin/activity" element={<AdminRoute><AdminActivityLog /></AdminRoute>} />
-                
-                {/* Legacy routes redirect */}
-                <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/admin/*" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/auth" element={<Navigate to="/" replace />} />
-                
-                {/* Catch-all */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <NotificationProvider>
+                <Routes>
+                  {/* Public Routes - Auth is the main entry point */}
+                  <Route path="/" element={<Auth />} />
+                  
+                  {/* Protected Dashboard Routes - single dashboard, role-based UI */}
+                  <Route path="/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+                  <Route path="/dashboard/inventory" element={<ProtectedRoute><AdminInventory /></ProtectedRoute>} />
+                  <Route path="/dashboard/shipments" element={<ProtectedRoute><AdminShipments /></ProtectedRoute>} />
+                  <Route path="/dashboard/negotiations" element={<ProtectedRoute><Negotiations /></ProtectedRoute>} />
+                  <Route path="/dashboard/negotiations/:id" element={<ProtectedRoute><NegotiationSession /></ProtectedRoute>} />
+                  <Route path="/dashboard/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+                  
+                  {/* Hidden Admin Routes - system overview only, no business data management */}
+                  <Route path="/__internal__/admin" element={<AdminRoute><AdminSystemDashboard /></AdminRoute>} />
+                  <Route path="/__internal__/admin/companies" element={<AdminRoute><AdminCompaniesView /></AdminRoute>} />
+                  <Route path="/__internal__/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+                  <Route path="/__internal__/admin/activity" element={<AdminRoute><AdminActivityLog /></AdminRoute>} />
+                  
+                  {/* Legacy routes redirect */}
+                  <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/admin/*" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/auth" element={<Navigate to="/" replace />} />
+                  
+                  {/* Catch-all */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </NotificationProvider>
             </BrowserRouter>
           </TooltipProvider>
         </CompanyProvider>
