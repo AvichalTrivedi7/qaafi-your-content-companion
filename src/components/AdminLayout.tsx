@@ -73,6 +73,7 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { canViewDashboard, canViewInventory, canViewShipments, isAdmin, isLogistics, isRetailer, isWholesaler, signOut, user } = useAuth();
+  const { rfqBadgeCount, negotiationBadgeCount } = useNotifications();
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
