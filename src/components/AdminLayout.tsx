@@ -151,7 +151,8 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
       items.push({ 
         to: '/dashboard/negotiations', 
         icon: <Handshake className="h-5 w-5" />, 
-        label: 'Negotiations'
+        label: 'Negotiations',
+        badge: rfqBadgeCount + negotiationBadgeCount,
       });
       items.push({ 
         to: '/dashboard/orders', 
