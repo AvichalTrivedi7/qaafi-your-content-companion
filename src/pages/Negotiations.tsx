@@ -603,6 +603,8 @@ const Negotiations = () => {
                         role="seller"
                         now={now}
                         onClick={() => navigate(`/dashboard/negotiations/${neg.id}`)}
+                        sellerStats={sellerStatsMap[neg.sellerCompanyId]}
+                        sellerName={getCompanyName(neg.sellerCompanyId)}
                       />
                     ))}
                   </div>
