@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Plus, FileText, Handshake, Clock, CheckCircle, XCircle, ArrowRight, Lock, ShoppingCart, Store } from 'lucide-react';
+import { Plus, FileText, Handshake, Clock, CheckCircle, XCircle, ArrowRight, Lock, ShoppingCart, Store, Search } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
   open: 'bg-info/10 text-info border-info/20',
@@ -112,6 +112,8 @@ const Negotiations = () => {
   const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const [marketplaceSearch, setMarketplaceSearch] = useState('');
+  const [myRfqSearch, setMyRfqSearch] = useState('');
 
   // Form state
   const [form, setForm] = useState({
@@ -257,9 +259,15 @@ const Negotiations = () => {
   const buyingNegotiations = negotiations.filter(n => n.buyerCompanyId === companyId);
   const sellingNegotiations = negotiations.filter(n => n.sellerCompanyId === companyId);
 
-  // Split RFQs into marketplace (other companies' open RFQs) and my RFQs
-  const marketplaceRfqs = rfqs.filter(r => r.buyerCompanyId !== companyId && r.status === 'open');
-  const myRfqs = rfqs.filter(r => r.buyerCompanyId === companyId);
+  // Split RFQs into marketplace (other companies' open RFQs) and my RFQs, with search filtering
+  const marketplaceRfqs = rfqs.filter(r =>
+    r.buyerCompanyId !== companyId && r.status === 'open' &&
+    (!marketplaceSearch || r.productName.toLowerCase().includes(marketplaceSearch.toLowerCase()))
+  );
+  const myRfqs = rfqs.filter(r =>
+    r.buyerCompanyId === companyId &&
+    (!myRfqSearch || r.productName.toLowerCase().includes(myRfqSearch.toLowerCase()))
+  );
 
   return (
     <AdminLayout>
@@ -353,14 +361,25 @@ const Negotiations = () => {
               </TabsList>
 
               {/* Marketplace: other companies' open RFQs */}
-              <TabsContent value="marketplace" className="mt-4">
+              <TabsContent value="marketplace" className="mt-4 space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search marketplace RFQs by product name..."
+                    value={marketplaceSearch}
+                    onChange={e => setMarketplaceSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
                 {loading ? (
                   <p className="text-muted-foreground text-center py-8">Loading...</p>
                 ) : marketplaceRfqs.length === 0 ? (
                   <Card>
                     <CardContent className="py-12 text-center">
                       <Store className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                      <p className="text-muted-foreground">No open RFQs in the marketplace right now.</p>
+                      <p className="text-muted-foreground">
+                        {marketplaceSearch ? 'No RFQs match your search.' : 'No open RFQs in the marketplace right now.'}
+                      </p>
                     </CardContent>
                   </Card>
                 ) : (
@@ -411,14 +430,25 @@ const Negotiations = () => {
               </TabsContent>
 
               {/* My RFQs: created by current company */}
-              <TabsContent value="mine" className="mt-4">
+              <TabsContent value="mine" className="mt-4 space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search your RFQs by product name..."
+                    value={myRfqSearch}
+                    onChange={e => setMyRfqSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
                 {loading ? (
                   <p className="text-muted-foreground text-center py-8">Loading...</p>
                 ) : myRfqs.length === 0 ? (
                   <Card>
                     <CardContent className="py-12 text-center">
                       <FileText className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                      <p className="text-muted-foreground">You haven't created any RFQs yet.</p>
+                      <p className="text-muted-foreground">
+                        {myRfqSearch ? 'No RFQs match your search.' : "You haven't created any RFQs yet."}
+                      </p>
                     </CardContent>
                   </Card>
                 ) : (
