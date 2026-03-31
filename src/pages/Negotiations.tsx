@@ -1,5 +1,5 @@
 // Negotiations Page - RFQ listing + creation + negotiation sessions
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/AdminLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,11 +12,14 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { Plus, FileText, Handshake, Clock, CheckCircle, XCircle, ArrowRight, Lock, ShoppingCart, Store, Search } from 'lucide-react';
+import { BestSellerBadge } from '@/components/BestSellerBadge';
+import { useSellerStats } from '@/hooks/useSellerStats';
 
 const STATUS_COLORS: Record<string, string> = {
   open: 'bg-info/10 text-info border-info/20',
