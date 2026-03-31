@@ -430,14 +430,25 @@ const Negotiations = () => {
               </TabsContent>
 
               {/* My RFQs: created by current company */}
-              <TabsContent value="mine" className="mt-4">
+              <TabsContent value="mine" className="mt-4 space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search your RFQs by product name..."
+                    value={myRfqSearch}
+                    onChange={e => setMyRfqSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
                 {loading ? (
                   <p className="text-muted-foreground text-center py-8">Loading...</p>
                 ) : myRfqs.length === 0 ? (
                   <Card>
                     <CardContent className="py-12 text-center">
                       <FileText className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                      <p className="text-muted-foreground">You haven't created any RFQs yet.</p>
+                      <p className="text-muted-foreground">
+                        {myRfqSearch ? 'No RFQs match your search.' : "You haven't created any RFQs yet."}
+                      </p>
                     </CardContent>
                   </Card>
                 ) : (
