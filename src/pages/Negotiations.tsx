@@ -112,6 +112,8 @@ const Negotiations = () => {
   const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const [marketplaceSearch, setMarketplaceSearch] = useState('');
+  const [myRfqSearch, setMyRfqSearch] = useState('');
 
   // Form state
   const [form, setForm] = useState({
