@@ -1,5 +1,5 @@
 // Negotiations Page - RFQ listing + creation + negotiation sessions
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/AdminLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,11 +12,14 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { Plus, FileText, Handshake, Clock, CheckCircle, XCircle, ArrowRight, Lock, ShoppingCart, Store, Search } from 'lucide-react';
+import { BestSellerBadge } from '@/components/BestSellerBadge';
+import { useSellerStats } from '@/hooks/useSellerStats';
 
 const STATUS_COLORS: Record<string, string> = {
   open: 'bg-info/10 text-info border-info/20',
@@ -49,7 +52,7 @@ function formatCountdown(expiresAt?: Date, now?: number): string | null {
 }
 
 // Negotiation card used in both Buying and Selling tabs
-function NegotiationCard({ neg, role, now, onClick }: { neg: Negotiation; role: 'buyer' | 'seller'; now: number; onClick: () => void }) {
+function NegotiationCard({ neg, role, now, onClick, sellerStats, sellerName }: { neg: Negotiation; role: 'buyer' | 'seller'; now: number; onClick: () => void; sellerStats?: { ordersCompleted: number; completionRate: number; avgRating: number; negotiationSuccessRate: number; avgResponseTimeMinutes: number; isBestSeller: boolean }; sellerName?: string }) {
   const isTerminal = ['accepted', 'expired', 'rejected'].includes(neg.status);
   const countdown = !isTerminal ? formatCountdown(neg.currentOfferExpiresAt, now) : null;
   const isUrgent = neg.currentOfferExpiresAt && !isTerminal && (neg.currentOfferExpiresAt.getTime() - now) < 60000;
@@ -63,7 +66,11 @@ function NegotiationCard({ neg, role, now, onClick }: { neg: Negotiation; role: 
             <span className="font-semibold text-sm">Negotiation</span>
             <Badge variant="outline" className={STATUS_COLORS[neg.status]}>{neg.status.replace('_', ' ')}</Badge>
             <Badge variant="secondary" className="text-xs">{role === 'buyer' ? 'Buying' : 'Selling'}</Badge>
+            {sellerStats && <BestSellerBadge stats={sellerStats} />}
           </div>
+          {sellerName && (
+            <p className="text-xs text-muted-foreground">Seller: {sellerName}</p>
+          )}
           <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
             <span>₹{neg.minPrice.toFixed(2)} – ₹{neg.maxPrice.toFixed(2)}</span>
             {neg.currentOfferPrice && (
@@ -114,6 +121,25 @@ const Negotiations = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [marketplaceSearch, setMarketplaceSearch] = useState('');
   const [myRfqSearch, setMyRfqSearch] = useState('');
+  const [bestSellerOnly, setBestSellerOnly] = useState(false);
+
+  // Collect unique seller company IDs from RFQs for badge lookups
+  const sellerCompanyIds = useMemo(() => {
+    const ids = new Set<string>();
+    rfqs.forEach(r => {
+      if (r.sellerCompanyId) ids.add(r.sellerCompanyId);
+    });
+    negotiations.forEach(n => {
+      if (n.sellerCompanyId) ids.add(n.sellerCompanyId);
+    });
+    return Array.from(ids);
+  }, [rfqs, negotiations]);
+  const sellerStatsMap = useSellerStats(sellerCompanyIds);
+
+  // Helper to get company name
+  const getCompanyName = useCallback((id: string) => {
+    return companies.find(c => c.id === id)?.name || 'Unknown';
+  }, [companies]);
 
   // Form state
   const [form, setForm] = useState({
@@ -262,7 +288,8 @@ const Negotiations = () => {
   // Split RFQs into marketplace (other companies' open RFQs) and my RFQs, with search filtering
   const marketplaceRfqs = rfqs.filter(r =>
     r.buyerCompanyId !== companyId && r.status === 'open' &&
-    (!marketplaceSearch || r.productName.toLowerCase().includes(marketplaceSearch.toLowerCase()))
+    (!marketplaceSearch || r.productName.toLowerCase().includes(marketplaceSearch.toLowerCase())) &&
+    (!bestSellerOnly || sellerStatsMap[r.sellerCompanyId]?.isBestSeller)
   );
   const myRfqs = rfqs.filter(r =>
     r.buyerCompanyId === companyId &&
@@ -362,14 +389,23 @@ const Negotiations = () => {
 
               {/* Marketplace: other companies' open RFQs */}
               <TabsContent value="marketplace" className="mt-4 space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search marketplace RFQs by product name..."
-                    value={marketplaceSearch}
-                    onChange={e => setMarketplaceSearch(e.target.value)}
-                    className="pl-9"
-                  />
+                <div className="flex items-center gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search marketplace RFQs by product name..."
+                      value={marketplaceSearch}
+                      onChange={e => setMarketplaceSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
+                    <Checkbox
+                      checked={bestSellerOnly}
+                      onCheckedChange={(v) => setBestSellerOnly(v === true)}
+                    />
+                    Show Best Sellers Only
+                  </label>
                 </div>
                 {loading ? (
                   <p className="text-muted-foreground text-center py-8">Loading...</p>
@@ -397,6 +433,12 @@ const Negotiations = () => {
                                   <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 gap-1">
                                     <Lock className="h-3 w-3" /> Fully Reserved
                                   </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span>Seller: {getCompanyName(rfq.sellerCompanyId)}</span>
+                                {sellerStatsMap[rfq.sellerCompanyId] && (
+                                  <BestSellerBadge stats={sellerStatsMap[rfq.sellerCompanyId]} />
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground">
@@ -534,6 +576,8 @@ const Negotiations = () => {
                         role="buyer"
                         now={now}
                         onClick={() => navigate(`/dashboard/negotiations/${neg.id}`)}
+                        sellerStats={sellerStatsMap[neg.sellerCompanyId]}
+                        sellerName={getCompanyName(neg.sellerCompanyId)}
                       />
                     ))}
                   </div>
@@ -559,6 +603,8 @@ const Negotiations = () => {
                         role="seller"
                         now={now}
                         onClick={() => navigate(`/dashboard/negotiations/${neg.id}`)}
+                        sellerStats={sellerStatsMap[neg.sellerCompanyId]}
+                        sellerName={getCompanyName(neg.sellerCompanyId)}
                       />
                     ))}
                   </div>
