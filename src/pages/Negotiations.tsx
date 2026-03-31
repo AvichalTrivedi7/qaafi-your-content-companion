@@ -385,14 +385,23 @@ const Negotiations = () => {
 
               {/* Marketplace: other companies' open RFQs */}
               <TabsContent value="marketplace" className="mt-4 space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search marketplace RFQs by product name..."
-                    value={marketplaceSearch}
-                    onChange={e => setMarketplaceSearch(e.target.value)}
-                    className="pl-9"
-                  />
+                <div className="flex items-center gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search marketplace RFQs by product name..."
+                      value={marketplaceSearch}
+                      onChange={e => setMarketplaceSearch(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
+                    <Checkbox
+                      checked={bestSellerOnly}
+                      onCheckedChange={(v) => setBestSellerOnly(v === true)}
+                    />
+                    Show Best Sellers Only
+                  </label>
                 </div>
                 {loading ? (
                   <p className="text-muted-foreground text-center py-8">Loading...</p>
