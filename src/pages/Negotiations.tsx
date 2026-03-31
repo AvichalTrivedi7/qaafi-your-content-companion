@@ -117,6 +117,25 @@ const Negotiations = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [marketplaceSearch, setMarketplaceSearch] = useState('');
   const [myRfqSearch, setMyRfqSearch] = useState('');
+  const [bestSellerOnly, setBestSellerOnly] = useState(false);
+
+  // Collect unique seller company IDs from RFQs for badge lookups
+  const sellerCompanyIds = useMemo(() => {
+    const ids = new Set<string>();
+    rfqs.forEach(r => {
+      if (r.sellerCompanyId) ids.add(r.sellerCompanyId);
+    });
+    negotiations.forEach(n => {
+      if (n.sellerCompanyId) ids.add(n.sellerCompanyId);
+    });
+    return Array.from(ids);
+  }, [rfqs, negotiations]);
+  const sellerStatsMap = useSellerStats(sellerCompanyIds);
+
+  // Helper to get company name
+  const getCompanyName = useCallback((id: string) => {
+    return companies.find(c => c.id === id)?.name || 'Unknown';
+  }, [companies]);
 
   // Form state
   const [form, setForm] = useState({
