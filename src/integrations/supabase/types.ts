@@ -511,6 +511,48 @@ export type Database = {
           },
         ]
       }
+      seller_stats: {
+        Row: {
+          avg_rating: number
+          avg_response_time_minutes: number
+          completion_rate: number
+          created_at: string
+          id: string
+          is_best_seller: boolean
+          negotiation_success_rate: number
+          orders_completed: number
+          seller_company_id: string
+          total_orders: number
+          updated_at: string
+        }
+        Insert: {
+          avg_rating?: number
+          avg_response_time_minutes?: number
+          completion_rate?: number
+          created_at?: string
+          id?: string
+          is_best_seller?: boolean
+          negotiation_success_rate?: number
+          orders_completed?: number
+          seller_company_id: string
+          total_orders?: number
+          updated_at?: string
+        }
+        Update: {
+          avg_rating?: number
+          avg_response_time_minutes?: number
+          completion_rate?: number
+          created_at?: string
+          id?: string
+          is_best_seller?: boolean
+          negotiation_success_rate?: number
+          orders_completed?: number
+          seller_company_id?: string
+          total_orders?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       shipments: {
         Row: {
           company_id: string
@@ -607,6 +649,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      recalculate_seller_stats: { Args: never; Returns: undefined }
       start_negotiation: {
         Args: { _quantity?: number; _rfq_id: string }
         Returns: string
