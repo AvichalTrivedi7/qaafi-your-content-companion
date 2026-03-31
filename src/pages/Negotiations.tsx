@@ -284,7 +284,8 @@ const Negotiations = () => {
   // Split RFQs into marketplace (other companies' open RFQs) and my RFQs, with search filtering
   const marketplaceRfqs = rfqs.filter(r =>
     r.buyerCompanyId !== companyId && r.status === 'open' &&
-    (!marketplaceSearch || r.productName.toLowerCase().includes(marketplaceSearch.toLowerCase()))
+    (!marketplaceSearch || r.productName.toLowerCase().includes(marketplaceSearch.toLowerCase())) &&
+    (!bestSellerOnly || sellerStatsMap[r.sellerCompanyId]?.isBestSeller)
   );
   const myRfqs = rfqs.filter(r =>
     r.buyerCompanyId === companyId &&
