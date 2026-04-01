@@ -42,6 +42,7 @@ export interface RFQ {
   maxPrice: number;
   status: RfqStatus;
   reservedQuantity: number;
+  fulfilledQuantity: number;
   isLocked: boolean;
   createdBy: string;
   createdAt: Date;
