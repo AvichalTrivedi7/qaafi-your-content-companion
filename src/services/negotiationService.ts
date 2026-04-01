@@ -29,6 +29,7 @@ function mapRfq(row: any): RFQ {
     maxPrice: Number(row.max_price),
     status: row.status,
     reservedQuantity: Number(row.reserved_quantity ?? 0),
+    fulfilledQuantity: Number(row.fulfilled_quantity ?? 0),
     isLocked: row.is_locked ?? false,
     createdBy: row.created_by,
     createdAt: new Date(row.created_at),
