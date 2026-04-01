@@ -252,7 +252,7 @@ export type Database = {
           {
             foreignKeyName: "negotiations_rfq_id_fkey"
             columns: ["rfq_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "rfqs"
             referencedColumns: ["id"]
           },
@@ -329,7 +329,7 @@ export type Database = {
           {
             foreignKeyName: "orders_rfq_id_fkey"
             columns: ["rfq_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "rfqs"
             referencedColumns: ["id"]
           },
@@ -445,6 +445,7 @@ export type Database = {
           created_at: string
           created_by: string
           expires_at: string | null
+          fulfilled_quantity: number
           id: string
           is_locked: boolean
           max_price: number
@@ -463,6 +464,7 @@ export type Database = {
           created_at?: string
           created_by: string
           expires_at?: string | null
+          fulfilled_quantity?: number
           id?: string
           is_locked?: boolean
           max_price: number
@@ -481,6 +483,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           expires_at?: string | null
+          fulfilled_quantity?: number
           id?: string
           is_locked?: boolean
           max_price?: number
@@ -713,7 +716,13 @@ export type Database = {
         | "order"
         | "rfq"
       reservation_status: "active" | "fulfilled" | "cancelled"
-      rfq_status: "open" | "negotiating" | "accepted" | "expired" | "cancelled"
+      rfq_status:
+        | "open"
+        | "negotiating"
+        | "partially_filled"
+        | "accepted"
+        | "expired"
+        | "cancelled"
       shipment_status: "pending" | "in_transit" | "delivered" | "cancelled"
     }
     CompositeTypes: {
@@ -896,7 +905,14 @@ export const Constants = {
         "rfq",
       ],
       reservation_status: ["active", "fulfilled", "cancelled"],
-      rfq_status: ["open", "negotiating", "accepted", "expired", "cancelled"],
+      rfq_status: [
+        "open",
+        "negotiating",
+        "partially_filled",
+        "accepted",
+        "expired",
+        "cancelled",
+      ],
       shipment_status: ["pending", "in_transit", "delivered", "cancelled"],
     },
   },
