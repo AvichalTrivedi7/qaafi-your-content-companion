@@ -446,9 +446,15 @@ const Negotiations = () => {
                               <p className="text-sm text-muted-foreground">
                                 {rfq.quantity} {rfq.unit} · ₹{rfq.minPrice.toFixed(2)} – ₹{rfq.maxPrice.toFixed(2)}
                               </p>
-                              <div className="flex items-center gap-3 text-xs">
+                              <div className="flex items-center gap-3 text-xs flex-wrap">
+                                {rfq.fulfilledQuantity > 0 && (
+                                  <span className="text-primary font-medium">{rfq.fulfilledQuantity} {rfq.unit} fulfilled</span>
+                                )}
+                                {rfq.reservedQuantity > 0 && (
+                                  <span className="text-warning font-medium">{rfq.reservedQuantity} {rfq.unit} reserved</span>
+                                )}
                                 <span className="text-success font-medium">
-                                  {Math.max(0, rfq.quantity - rfq.reservedQuantity)} {rfq.unit} available
+                                  {Math.max(0, rfq.quantity - rfq.fulfilledQuantity - rfq.reservedQuantity)} {rfq.unit} available
                                 </span>
                               </div>
                             </div>
