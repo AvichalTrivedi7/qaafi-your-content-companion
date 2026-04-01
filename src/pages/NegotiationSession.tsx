@@ -36,6 +36,7 @@ const NegotiationSession = () => {
   const [data, setData] = useState<NegotiationWithRFQ | null>(null);
   const [loading, setLoading] = useState(true);
   const [offerPrice, setOfferPrice] = useState<number | null>(null);
+  const [offerQuantity, setOfferQuantity] = useState<number | null>(null);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const offersEndRef = useRef<HTMLDivElement>(null);
