@@ -459,17 +459,24 @@ const Negotiations = () => {
                               </div>
                             </div>
                             <div className="flex items-center gap-2 ml-4 shrink-0">
-                              {!hasNeg && !rfq.isLocked ? (
-                                <Button size="sm" onClick={() => handleStartNegotiation(rfq.id)}>
-                                  Negotiate <ArrowRight className="h-4 w-4 ml-1" />
-                                </Button>
-                              ) : hasNeg ? (
-                                <Button size="sm" variant="outline" onClick={() => openNegotiation(rfq.id)}>
-                                  Open Meter <ArrowRight className="h-4 w-4 ml-1" />
-                                </Button>
-                              ) : (
-                                <Badge variant="secondary" className="text-xs">Fully Reserved</Badge>
-                              )}
+                              {(() => {
+                                const available = Math.max(0, rfq.quantity - rfq.fulfilledQuantity - rfq.reservedQuantity);
+                                if (!hasNeg && available > 0) {
+                                  return (
+                                    <Button size="sm" onClick={() => handleStartNegotiation(rfq.id)}>
+                                      Negotiate <ArrowRight className="h-4 w-4 ml-1" />
+                                    </Button>
+                                  );
+                                } else if (hasNeg) {
+                                  return (
+                                    <Button size="sm" variant="outline" onClick={() => openNegotiation(rfq.id)}>
+                                      Open Meter <ArrowRight className="h-4 w-4 ml-1" />
+                                    </Button>
+                                  );
+                                } else {
+                                  return <Badge variant="secondary" className="text-xs">Fully Reserved</Badge>;
+                                }
+                              })()}
                             </div>
                           </CardContent>
                         </Card>
