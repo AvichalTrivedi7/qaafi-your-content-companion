@@ -532,16 +532,25 @@ const Negotiations = () => {
                               ₹{rfq.minPrice.toFixed(2)} – ₹{rfq.maxPrice.toFixed(2)}
                             </p>
                             {/* Meter availability */}
-                            <div className="flex items-center gap-3 text-xs mb-1">
+                            <div className="flex items-center gap-3 text-xs mb-1 flex-wrap">
                               <span className="text-foreground font-medium">{rfq.quantity} {rfq.unit} requested</span>
+                              {rfq.fulfilledQuantity > 0 && (
+                                <span className="text-primary">{rfq.fulfilledQuantity} {rfq.unit} fulfilled</span>
+                              )}
                               <span className="text-warning">{rfq.reservedQuantity} {rfq.unit} reserved</span>
-                              <span className="text-success">{Math.max(0, rfq.quantity - rfq.reservedQuantity)} {rfq.unit} remaining</span>
+                              <span className="text-success">{Math.max(0, rfq.quantity - rfq.fulfilledQuantity - rfq.reservedQuantity)} {rfq.unit} remaining</span>
                             </div>
                             <div className="h-1.5 w-full max-w-xs rounded-full bg-muted overflow-hidden mb-2">
-                              <div
-                                className="h-full rounded-full bg-warning transition-all duration-300"
-                                style={{ width: `${Math.min(100, (rfq.reservedQuantity / rfq.quantity) * 100)}%` }}
-                              />
+                              <div className="h-full flex">
+                                <div
+                                  className="h-full bg-primary transition-all duration-300"
+                                  style={{ width: `${Math.min(100, (rfq.fulfilledQuantity / rfq.quantity) * 100)}%` }}
+                                />
+                                <div
+                                  className="h-full bg-warning transition-all duration-300"
+                                  style={{ width: `${Math.min(100 - (rfq.fulfilledQuantity / rfq.quantity) * 100, (rfq.reservedQuantity / rfq.quantity) * 100)}%` }}
+                                />
+                              </div>
                             </div>
                             {/* Negotiation counts */}
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
