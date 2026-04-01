@@ -4,7 +4,7 @@
 // Enums & Union Types
 // ============================================================================
 
-export const RFQ_STATUSES = ['open', 'negotiating', 'accepted', 'expired', 'cancelled'] as const;
+export const RFQ_STATUSES = ['open', 'negotiating', 'partially_filled', 'accepted', 'expired', 'cancelled'] as const;
 export type RfqStatus = typeof RFQ_STATUSES[number];
 
 export const NEGOTIATION_STATUSES = ['open', 'offer_made', 'counter_offered', 'accepted', 'expired', 'rejected'] as const;
