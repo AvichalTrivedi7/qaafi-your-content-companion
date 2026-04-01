@@ -338,6 +338,7 @@ const NegotiationSession = () => {
                   <Button onClick={handleMakeOffer} disabled={submitting || offerPrice === null}>
                     <Send className="h-4 w-4 mr-2" />
                     {data.status === 'open' ? 'Make Offer' : 'Counter Offer'} — ₹{offerPrice?.toFixed(2)}
+                    {isBuyer && offerQuantity ? ` × ${offerQuantity} ${data.rfq.unit}` : ''}
                   </Button>
                 )}
                 {canAccept && (
