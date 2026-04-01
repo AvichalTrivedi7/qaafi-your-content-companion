@@ -24,6 +24,7 @@ import { useSellerStats } from '@/hooks/useSellerStats';
 const STATUS_COLORS: Record<string, string> = {
   open: 'bg-info/10 text-info border-info/20',
   negotiating: 'bg-warning/10 text-warning border-warning/20',
+  partially_filled: 'bg-accent text-accent-foreground border-border',
   accepted: 'bg-success/10 text-success border-success/20',
   expired: 'bg-muted text-muted-foreground border-border',
   cancelled: 'bg-destructive/10 text-destructive border-destructive/20',
@@ -199,6 +200,7 @@ const Negotiations = () => {
             minPrice: Number(row.min_price),
             maxPrice: Number(row.max_price),
             reservedQuantity: Number(row.reserved_quantity ?? 0),
+            fulfilledQuantity: Number(row.fulfilled_quantity ?? 0),
             isLocked: row.is_locked ?? false,
           } : r));
         }
@@ -287,7 +289,7 @@ const Negotiations = () => {
 
   // Split RFQs into marketplace (other companies' open RFQs) and my RFQs, with search filtering
   const marketplaceRfqs = rfqs.filter(r =>
-    r.buyerCompanyId !== companyId && r.status === 'open' &&
+    r.buyerCompanyId !== companyId && ['open', 'negotiating', 'partially_filled'].includes(r.status) &&
     (!marketplaceSearch || r.productName.toLowerCase().includes(marketplaceSearch.toLowerCase())) &&
     (!bestSellerOnly || sellerStatsMap[r.sellerCompanyId]?.isBestSeller)
   );
@@ -444,24 +446,37 @@ const Negotiations = () => {
                               <p className="text-sm text-muted-foreground">
                                 {rfq.quantity} {rfq.unit} · ₹{rfq.minPrice.toFixed(2)} – ₹{rfq.maxPrice.toFixed(2)}
                               </p>
-                              <div className="flex items-center gap-3 text-xs">
+                              <div className="flex items-center gap-3 text-xs flex-wrap">
+                                {rfq.fulfilledQuantity > 0 && (
+                                  <span className="text-primary font-medium">{rfq.fulfilledQuantity} {rfq.unit} fulfilled</span>
+                                )}
+                                {rfq.reservedQuantity > 0 && (
+                                  <span className="text-warning font-medium">{rfq.reservedQuantity} {rfq.unit} reserved</span>
+                                )}
                                 <span className="text-success font-medium">
-                                  {Math.max(0, rfq.quantity - rfq.reservedQuantity)} {rfq.unit} available
+                                  {Math.max(0, rfq.quantity - rfq.fulfilledQuantity - rfq.reservedQuantity)} {rfq.unit} available
                                 </span>
                               </div>
                             </div>
                             <div className="flex items-center gap-2 ml-4 shrink-0">
-                              {!hasNeg && !rfq.isLocked ? (
-                                <Button size="sm" onClick={() => handleStartNegotiation(rfq.id)}>
-                                  Negotiate <ArrowRight className="h-4 w-4 ml-1" />
-                                </Button>
-                              ) : hasNeg ? (
-                                <Button size="sm" variant="outline" onClick={() => openNegotiation(rfq.id)}>
-                                  Open Meter <ArrowRight className="h-4 w-4 ml-1" />
-                                </Button>
-                              ) : (
-                                <Badge variant="secondary" className="text-xs">Fully Reserved</Badge>
-                              )}
+                              {(() => {
+                                const available = Math.max(0, rfq.quantity - rfq.fulfilledQuantity - rfq.reservedQuantity);
+                                if (!hasNeg && available > 0) {
+                                  return (
+                                    <Button size="sm" onClick={() => handleStartNegotiation(rfq.id)}>
+                                      Negotiate <ArrowRight className="h-4 w-4 ml-1" />
+                                    </Button>
+                                  );
+                                } else if (hasNeg) {
+                                  return (
+                                    <Button size="sm" variant="outline" onClick={() => openNegotiation(rfq.id)}>
+                                      Open Meter <ArrowRight className="h-4 w-4 ml-1" />
+                                    </Button>
+                                  );
+                                } else {
+                                  return <Badge variant="secondary" className="text-xs">Fully Reserved</Badge>;
+                                }
+                              })()}
                             </div>
                           </CardContent>
                         </Card>
@@ -517,16 +532,25 @@ const Negotiations = () => {
                               ₹{rfq.minPrice.toFixed(2)} – ₹{rfq.maxPrice.toFixed(2)}
                             </p>
                             {/* Meter availability */}
-                            <div className="flex items-center gap-3 text-xs mb-1">
+                            <div className="flex items-center gap-3 text-xs mb-1 flex-wrap">
                               <span className="text-foreground font-medium">{rfq.quantity} {rfq.unit} requested</span>
+                              {rfq.fulfilledQuantity > 0 && (
+                                <span className="text-primary">{rfq.fulfilledQuantity} {rfq.unit} fulfilled</span>
+                              )}
                               <span className="text-warning">{rfq.reservedQuantity} {rfq.unit} reserved</span>
-                              <span className="text-success">{Math.max(0, rfq.quantity - rfq.reservedQuantity)} {rfq.unit} remaining</span>
+                              <span className="text-success">{Math.max(0, rfq.quantity - rfq.fulfilledQuantity - rfq.reservedQuantity)} {rfq.unit} remaining</span>
                             </div>
                             <div className="h-1.5 w-full max-w-xs rounded-full bg-muted overflow-hidden mb-2">
-                              <div
-                                className="h-full rounded-full bg-warning transition-all duration-300"
-                                style={{ width: `${Math.min(100, (rfq.reservedQuantity / rfq.quantity) * 100)}%` }}
-                              />
+                              <div className="h-full flex">
+                                <div
+                                  className="h-full bg-primary transition-all duration-300"
+                                  style={{ width: `${Math.min(100, (rfq.fulfilledQuantity / rfq.quantity) * 100)}%` }}
+                                />
+                                <div
+                                  className="h-full bg-warning transition-all duration-300"
+                                  style={{ width: `${Math.min(100 - (rfq.fulfilledQuantity / rfq.quantity) * 100, (rfq.reservedQuantity / rfq.quantity) * 100)}%` }}
+                                />
+                              </div>
                             </div>
                             {/* Negotiation counts */}
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
