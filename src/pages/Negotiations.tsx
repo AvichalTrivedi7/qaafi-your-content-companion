@@ -24,6 +24,7 @@ import { useSellerStats } from '@/hooks/useSellerStats';
 const STATUS_COLORS: Record<string, string> = {
   open: 'bg-info/10 text-info border-info/20',
   negotiating: 'bg-warning/10 text-warning border-warning/20',
+  partially_filled: 'bg-accent text-accent-foreground border-border',
   accepted: 'bg-success/10 text-success border-success/20',
   expired: 'bg-muted text-muted-foreground border-border',
   cancelled: 'bg-destructive/10 text-destructive border-destructive/20',
