@@ -6,6 +6,7 @@ import { AdminLayout } from '@/components/AdminLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { negotiationService } from '@/services/negotiationService';
 import { NegotiationMeter } from '@/components/negotiation/NegotiationMeter';
+import { QuantityPriceControl } from '@/components/negotiation/QuantityPriceControl';
 import type { NegotiationWithRFQ, NegotiationOffer } from '@/domain/negotiation.models';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ const NegotiationSession = () => {
   const [data, setData] = useState<NegotiationWithRFQ | null>(null);
   const [loading, setLoading] = useState(true);
   const [offerPrice, setOfferPrice] = useState<number | null>(null);
+  const [offerQuantity, setOfferQuantity] = useState<number | null>(null);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const offersEndRef = useRef<HTMLDivElement>(null);
@@ -280,7 +282,7 @@ const NegotiationSession = () => {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
-                Price Meter
+                {isBuyer ? 'Quantity & Price' : 'Price Meter'}
                 {countdownLabel && (
                   <Badge variant="outline" className={cn("ml-auto text-xs", timeLeft && timeLeft < 60000 && "border-destructive text-destructive animate-pulse")}>
                     <Clock className="h-3 w-3 mr-1" />
@@ -290,15 +292,32 @@ const NegotiationSession = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
-              <NegotiationMeter
-                minPrice={data.minPrice}
-                maxPrice={data.maxPrice}
-                currentOffer={data.currentOfferPrice}
-                isReadOnly={!canMakeOffer}
-                onOfferChange={setOfferPrice}
-                role={role}
-                currentOfferBy={currentOfferByRole}
-              />
+              {isBuyer ? (
+                <QuantityPriceControl
+                  maxQuantity={data.negotiationQuantity}
+                  unit={data.rfq.unit}
+                  baseMinPrice={data.minPrice}
+                  baseMaxPrice={data.maxPrice}
+                  initialQuantity={data.negotiationQuantity}
+                  initialPrice={data.currentOfferPrice ?? undefined}
+                  isReadOnly={!canMakeOffer}
+                  onQuantityChange={setOfferQuantity}
+                  onPriceChange={setOfferPrice}
+                  currentOffer={data.currentOfferPrice}
+                  currentOfferBy={currentOfferByRole}
+                  role="buyer"
+                />
+              ) : (
+                <NegotiationMeter
+                  minPrice={data.minPrice}
+                  maxPrice={data.maxPrice}
+                  currentOffer={data.currentOfferPrice}
+                  isReadOnly={!canMakeOffer}
+                  onOfferChange={setOfferPrice}
+                  role={role}
+                  currentOfferBy={currentOfferByRole}
+                />
+              )}
             </CardContent>
           </Card>
         )}
@@ -319,6 +338,7 @@ const NegotiationSession = () => {
                   <Button onClick={handleMakeOffer} disabled={submitting || offerPrice === null}>
                     <Send className="h-4 w-4 mr-2" />
                     {data.status === 'open' ? 'Make Offer' : 'Counter Offer'} — ₹{offerPrice?.toFixed(2)}
+                    {isBuyer && offerQuantity ? ` × ${offerQuantity} ${data.rfq.unit}` : ''}
                   </Button>
                 )}
                 {canAccept && (
