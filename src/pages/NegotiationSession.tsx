@@ -6,6 +6,7 @@ import { AdminLayout } from '@/components/AdminLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { negotiationService } from '@/services/negotiationService';
 import { NegotiationMeter } from '@/components/negotiation/NegotiationMeter';
+import { QuantityPriceControl } from '@/components/negotiation/QuantityPriceControl';
 import type { NegotiationWithRFQ, NegotiationOffer } from '@/domain/negotiation.models';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
