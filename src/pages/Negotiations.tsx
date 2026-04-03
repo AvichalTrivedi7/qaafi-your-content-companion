@@ -265,9 +265,20 @@ const Negotiations = () => {
     }
   };
 
-  const handleStartNegotiation = async (rfqId: string) => {
+  const [negotiateDialog, setNegotiateDialog] = useState<{ rfqId: string; maxQty: number; unit: string } | null>(null);
+  const [negotiateQty, setNegotiateQty] = useState('');
+
+  const handleStartNegotiation = async () => {
+    if (!negotiateDialog) return;
+    const qty = parseFloat(negotiateQty);
+    if (!qty || qty <= 0 || qty > negotiateDialog.maxQty) {
+      toast({ title: 'Invalid quantity', description: `Enter a value between 0 and ${negotiateDialog.maxQty}`, variant: 'destructive' });
+      return;
+    }
     try {
-      const neg = await negotiationService.startNegotiation(rfqId);
+      const neg = await negotiationService.startNegotiation(negotiateDialog.rfqId, qty);
+      setNegotiateDialog(null);
+      setNegotiateQty('');
       toast({ title: 'Negotiation started' });
       navigate(`/dashboard/negotiations/${neg.id}`);
     } catch (err: any) {
