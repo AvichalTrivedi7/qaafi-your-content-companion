@@ -649,6 +649,38 @@ const Negotiations = () => {
           </TabsContent>
         </Tabs>
       </div>
+      {/* Quantity selector dialog */}
+      <Dialog open={!!negotiateDialog} onOpenChange={(open) => { if (!open) setNegotiateDialog(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Quantity to Negotiate</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Available: {negotiateDialog?.maxQty} {negotiateDialog?.unit}</Label>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="negotiate-qty">Quantity ({negotiateDialog?.unit})</Label>
+              <Input
+                id="negotiate-qty"
+                type="number"
+                min={0.01}
+                max={negotiateDialog?.maxQty}
+                step="any"
+                value={negotiateQty}
+                onChange={(e) => setNegotiateQty(e.target.value)}
+                placeholder={`Max ${negotiateDialog?.maxQty}`}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNegotiateDialog(null)}>Cancel</Button>
+            <Button onClick={handleStartNegotiation} disabled={!negotiateQty || parseFloat(negotiateQty) <= 0 || parseFloat(negotiateQty) > (negotiateDialog?.maxQty ?? 0)}>
+              Start Negotiation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
