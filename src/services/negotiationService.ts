@@ -149,11 +149,11 @@ class NegotiationService {
 
   // ------ Negotiation Operations ------
 
-  async startNegotiation(rfqId: string): Promise<Negotiation> {
+  async startNegotiation(rfqId: string, quantity?: number): Promise<Negotiation> {
     // Use atomic RPC that handles meter locking + RFQ status + negotiation creation
-    const { data: negId, error } = await supabase.rpc('start_negotiation', {
-      _rfq_id: rfqId,
-    } as any);
+    const rpcParams: any = { _rfq_id: rfqId };
+    if (quantity != null) rpcParams._quantity = quantity;
+    const { data: negId, error } = await supabase.rpc('start_negotiation', rpcParams);
 
     if (error) throw new Error(`Failed to start negotiation: ${error.message}`);
 
