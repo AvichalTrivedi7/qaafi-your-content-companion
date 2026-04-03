@@ -474,7 +474,7 @@ const Negotiations = () => {
                                 const available = Math.max(0, rfq.quantity - rfq.fulfilledQuantity - rfq.reservedQuantity);
                                 if (!hasNeg && available > 0) {
                                   return (
-                                    <Button size="sm" onClick={() => handleStartNegotiation(rfq.id)}>
+                                    <Button size="sm" onClick={() => { setNegotiateDialog({ rfqId: rfq.id, maxQty: available, unit: rfq.unit }); setNegotiateQty(String(available)); }}>
                                       Negotiate <ArrowRight className="h-4 w-4 ml-1" />
                                     </Button>
                                   );
